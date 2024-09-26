@@ -14,7 +14,7 @@ def asym_quantize(x: torch.Tensor, bits: int):
     minq, maxq = get_minq_maxq(bits=bits, sym=False)
     xmax = torch.amax(x, dim=-1, keepdim=True)
     xmin = torch.amin(x, dim=-1, keepdim=True)
-    print("xmax, xmin", xmax, xmin)
+    print("xmax, xmin", xmax, xmin, x.max(), x.min(), maxq)
     scale = (((xmax - xmin)*0.9).clamp(min=1e-5) / maxq)
     zero = -xmin
     q = torch.clamp(torch.round((x + zero) / scale), 0, maxq)
@@ -97,8 +97,8 @@ def frac_add(x, y, bw):
     tmp_y=(y*(2**(scale-1))).to(torch.int64)
     #print('y: ', y)
     ans = tmp_x + tmp_y
-    # if(ans >=2 **(bw-1)).any():
-    #   print('addition overflow')
+    if(ans >=2 **(bw-1)).any():
+      print('addition overflow')
     ans[ans >= 2 ** (bw - 1)] = (2 ** (bw - 1)) - 1
     result = ans.to(torch.int64)
     return result/(2**(scale-1))
@@ -116,9 +116,9 @@ def frac_div(x, y, bw):
 
 def custom_int_softmax(x, bw, term):
     x_max = torch.max(x)
-    x = x - x_max
-    #print(x_max, x.max())
-    x_exp, s = custom_int_exp(x, bw, term)
+    x_norm = x - x_max
+    print("before exp", x_max, x.max())
+    x_exp, s = custom_int_exp(x_norm, bw, term)
     ln2 = torch.log(torch.tensor(2))
     #print("sum should be", x_exp.sum(), x_exp.max(), s)
     x_sum = torch.tensor(0)
