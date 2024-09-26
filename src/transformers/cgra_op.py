@@ -51,65 +51,6 @@ def frac_exp2(x, bw, term):
 
     return result
 
-#def custom_int_exp(x, bw, term):
-#    fp_x = x.to(torch.float64)
-
-#    input = fp_x*torch.tensor(1.44238)
-#    int_part = torch.floor(input)
-#    frac_part = input - int_part
-
-#    result = torch.pow(2, int_part)*frac_exp2(frac_part, bw, term)
-#    if torch.isnan(frac_exp2(frac_part, bw, term)).any():
-#        print('2 exp frac overflow')
-#    if torch.isnan(torch.pow(2, int_part)).any():
-#        print('2 exp of int overflow', result.dtype)
-#    return result
-  
-#def frac_add(x, y, bw):
-#    #x=(x*(2**(bw-1))).to(torch.int64)
-#    #y=(y*(2**(bw-1))).to(torch.int64)
-
-#    x=torch.round(x*(2**(bw-1)))/(2**(bw-1))
-#    y=torch.round(y*(2**(bw-1)))/(2**(bw-1))
-    
-#    ans = x + y
-#    if (ans >= 2 ** (2 * bw - 1)).any():
-#        print('addition overflow', x, y)
-#    ans[ans >= 2 ** (2 * bw - 1)] = (2 ** (2 * bw - 1)) - 1
-#    result = torch.round(ans*(2**(bw-1)))/(2**(bw-1))
-    #return result/(2**(bw-1))
-#    return result
-
-#def frac_div(x, y, bw):
-    #x=(x*(2**(bw-1))).to(torch.int64)
-    #y=(y*(2**(bw-1))).to(torch.int64)
-#    x=torch.round(x*(2**(bw-1)))
-#    y=torch.round(y*(2**(bw-1)))
-#    return x / y
-
-#def custom_int_softmax(x, bw, term):
-#    x_max = torch.max(x, -1, keepdim=True)[0]
-#    x = x - x_max
-#    x_exp = custom_int_exp(x.to(dtype=torch.float64), bw, term)
-#    #x_exp = torch.exp(x)
-    
-    #x_sum = torch.tensor(0)
-    #for x_i in x_exp:
-    #    x_sum = frac_add(x_sum, x_i, bw)
-
-#    if torch.isnan(x_exp).any():
-#        print('x_exp overflow', x_exp.dtype)
-            
-#    x_exp = torch.round(x_exp*(2**(bw-1)))/(2**(bw-1))
-#    if torch.isnan(x_exp).any():
-#        print('x_exp round overflow', x_exp.dtype)
-#    x_exp = torch.clamp(x_exp, max=(2 ** (2 * bw - 1)) - 1)
-#    x_sum = torch.sum(x_exp,dim=-1,keepdim=True)
-
-    
-    #return x_exp / x_sum
-#    return frac_div(x_exp, x_sum, bw)
-
 def custom_int_tanh(x, bw, term):
     x = x.to(dtype=torch.float64)
     exp_2x = custom_int_exp(frac_mult(frac_mult(torch.tensor(-2.0), x, bw), x, bw), bw, term)
@@ -131,6 +72,8 @@ def custom_int_gelu(x, bw, term):
 
 def custom_int_exp(x, bw, term):
     q, scale, zero = asym_quantize(x, bw)
+    if scale.max() in [float('inf'), float('-inf')]:
+        print('scale overflow', scale, scale.max(), x.max(), x.min())
     fp_x = asym_dequantize(q, scale, zero)
     #print(fp_x)
     input = fp_x*torch.tensor(1.44238)
