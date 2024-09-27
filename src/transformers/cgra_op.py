@@ -135,13 +135,17 @@ def frac_div(x, y, bw):
     return tmp_x / tmp_y
 
 def custom_int_softmax(x, bw, term):
-    x = x.to(torch.float32)
-    x_clamp = torch.clamp(x, min = - 20, max = 30)
-    x_max = torch.max(x_clamp)
+    new_x = x.to(torch.float64)
+    print("x", new_x.max(), new_x.min())
+    x_clamp = torch.clamp(new_x, min = - 20, max = 30)
+    x_max = torch.max(x_clamp, -1, keepdim=True)[0]
+    # x_max = torch.max(x_clamp)
     x_norm = x_clamp - x_max
     print("before exp", x_max, x_clamp.max(), x_clamp.min())
     print("x_norm", x_norm, x_norm.max(), x_norm.min())
     x_exp, s = custom_int_exp(x_norm, bw, term)
+    if torch.isnan(x_exp).any():
+        print('x_exp overflow', x_exp.dtype)
     print("sum should be", x_exp.sum(dim=-1, keepdim=True), x_exp.max(), s)
     # x_sum = torch.tensor(0)     # can use scale
 
