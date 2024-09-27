@@ -20,6 +20,9 @@ def asym_quantize(x: torch.Tensor, bits: int):
 
     return q, scale, zero
 
+def custom_int_gelu(x, bw, term):
+    raise NotImplementedError
+
 def asym_dequantize(q, scale, zero):
     return q * scale - zero
 
