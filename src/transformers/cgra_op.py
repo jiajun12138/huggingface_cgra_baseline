@@ -19,11 +19,11 @@ def asym_quantize(x: torch.Tensor, bits: int):
     # print("xmax, xmin", xmax, xmin, x.max(), x.min(), maxq)
     # print("sub", xmax - xmin, "max", (xmax - xmin).max())
     # print("clamp", ((xmax - xmin)*0.9).clamp(min=1e-5))
-    print("clamp result", ((xmax - xmin)*0.9).clamp(min=1e-5).max())
-    scale = (((xmax - xmin)*0.9).clamp(min=1e-5) )
+    print("clamp result", ((xmax - xmin)*0.9).max())
+    scale = (((xmax - xmin)*0.9) )
     print("scale in this, ", scale, scale.max())
     zero = -xmin
-    q = torch.clamp(torch.round((x + zero) / scale), 0, xmax)
+    q = torch.clamp(torch.round((x + zero) / scale), -xmax, xmax)
 
     return q, scale, zero
 
