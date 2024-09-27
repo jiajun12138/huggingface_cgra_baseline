@@ -75,6 +75,7 @@ def frac_exp2(x, bw, term):
 
 def custom_int_exp(x, bw, term):
     #print(fp_x)
+    print("call int exp")
     input = x*torch.tensor(1.442695)
 
     _, scale, zero = asym_quantize(input, bw)
