@@ -78,7 +78,8 @@ def frac_exp2(x, bw, term):
 #     #tanh_x = (1-exp_2x)/(1+exp_2x)
 #     return tanh_x
 
-# def custom_int_gelu(x, bw, term):
+def custom_int_gelu(x, bw, term):
+    raise NotImplementedError
 #     x = x.to(dtype=torch.float64)
 #     x_3 = frac_mult(frac_mult(frac_mult(x, x, bw), x, bw), torch.tensor(0.044715), bw)
 #     #x_3=x*x*x
@@ -134,6 +135,7 @@ def frac_div(x, y, bw):
     return tmp_x / tmp_y
 
 def custom_int_softmax(x, bw, term):
+    x = x.to(dtype=torch.float32)
     x_max = torch.max(x)
     x_norm = x - x_max
     print("before exp", x_max, x.max(), x.min())
