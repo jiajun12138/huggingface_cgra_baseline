@@ -51,13 +51,13 @@ def frac_exp2(x, bw, term):
 
     return result
 
-count = 0
+count = {'1':0}
 
 def custom_int_exp(x, bw, term):
     fp_x = x.to(torch.float64)
 
-    count += 1
-    if count < 5:
+    count['1'] += 1
+    if count['1'] < 5:
         print('x', fp_x.max(), fp_x.min(), fp_x.mean())
 
     input = fp_x*torch.tensor(1.44238)
