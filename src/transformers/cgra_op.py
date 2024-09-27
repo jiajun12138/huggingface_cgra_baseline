@@ -170,4 +170,4 @@ def custom_int_layernorm(x, w, b, bw):
     invsqrt = 1.0 / (x_sum_x2 - (x_sum_x ** 2) + eps).sqrt()
     # prrint(invsqrt, 1.0 / (x_1.var()))
     ans = w * (x_1 - x_sum_x) * invsqrt + b
-    return ans.to(torch.float64)
+    return ans.to(x.dtype)
