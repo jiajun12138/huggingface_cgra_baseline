@@ -74,15 +74,15 @@ def custom_int_exp(x, bw, term):
     #print(fp_x)
     input = x*torch.tensor(1.442695)
 
-    _, scale, zero = asym_quantize(input, bw)
-    if scale.max() in [float('inf'), float('-inf')]:
-        print('scale overflow', scale, scale.max(), x.max(), x.min())
+    # _, scale, zero = asym_quantize(input, bw)
+    # if scale.max() in [float('inf'), float('-inf')]:
+        # print('scale overflow', scale, scale.max(), x.max(), x.min())
 
     int_part = torch.floor(input)
     frac_part = input - int_part
     #print(frac_part)
     #print(int_part)
-    max_int_scale = 2 ** int(scale.max() * 0.9)
+    max_int_scale = 2 ** int(input.max() * 0.9)
     #print(max_int_scale)
     q, scale = frac_exp2(frac_part, bw, term)
     q = q * torch.pow(2, int_part) / max_int_scale
