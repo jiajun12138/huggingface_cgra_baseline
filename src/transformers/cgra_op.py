@@ -60,7 +60,7 @@ def frac_exp2(x, bw, term):
     else:
         assert False
 
-  return result, scale3
+    return result, scale3
 
 def custom_int_tanh(x, bw, term):
     x = x.to(dtype=torch.float64)
