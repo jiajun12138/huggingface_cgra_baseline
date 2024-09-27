@@ -135,7 +135,7 @@ def frac_div(x, y, bw):
     return tmp_x / tmp_y
 
 def custom_int_softmax(x, bw, term):
-    x = x.to(dtype=torch.float32)
+    x = x.to(torch.float32)
     x_max = torch.max(x)
     x_norm = x - x_max
     print("before exp", x_max, x.max(), x.min())
