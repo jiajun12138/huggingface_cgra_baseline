@@ -30,6 +30,9 @@ def asym_quantize(x: torch.Tensor, bits: int):
 def asym_dequantize(q, scale, zero):
     return q * scale - zero
 
+def custom_int_gelu:
+    raise NotImplementedError
+
 def frac_mult(x, y, bw):
     #print(x)
     # print(x,y)
