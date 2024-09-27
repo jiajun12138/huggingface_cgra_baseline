@@ -391,6 +391,7 @@ class OPTDecoderLayer(nn.Module):
         self.do_layer_norm_before = config.do_layer_norm_before
         self.dropout = config.dropout
         self.activation_fn = ACT2FN[config.activation_function]
+        self.bw = config.softmax_bw
         
         self.self_attn_layer_norm = nn.LayerNorm(
             self.embed_dim, elementwise_affine=config.layer_norm_elementwise_affine
@@ -428,7 +429,7 @@ class OPTDecoderLayer(nn.Module):
 
         # 125m, 1.7B, ..., 175B applies layer norm BEFORE attention
         if self.do_layer_norm_before:
-            hidden_states = custom_int_layernorm(hidden_states, self.self_attn_layer_norm.weight, self.self_attn_layer_norm.bias, self.softmax_bw, self.softmax_term)
+            hidden_states = custom_int_layernorm(hidden_states, self.self_attn_layer_norm.weight, self.self_attn_layer_norm.bias, self.softmax_bw)
             # hidden_states = self.self_attn_layer_norm(hidden_states)
 
         # Self Attention

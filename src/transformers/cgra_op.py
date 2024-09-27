@@ -139,13 +139,19 @@ count = {"1":0}
 
 def custom_int_layernorm(x, w, b, bw):
     eps = 1e-5
-    x_sum_x = torch.tensor(0)
-    x_sum_x2 = torch.tensor(0)
-    scale = x.abs().max() * 0.9
+    # x_sum_x = torch.tensor(0)
+    # x_sum_x2 = torch.tensor(0)
+    scale = x.max() * 0.9
     x_1 = x / scale
-    for x_i in x_1:
-        x_sum_x = frac_add(x_sum_x, x_i, bw)
-        x_sum_x2 = frac_add(frac_mult(x_i, x_i, bw), x_sum_x2, bw)
+
+    int_s = 2 ** frac_bits[bw]
+    x_1 = (x_1 * int_s).to(torch.int64)
+
+    x_sum_x = x_1.sum(dim=-1, keepdim=True)
+    x_sum_x2 = (x_1 ** 2).sum(dim=-1, keepdim=True)
+    # for x_i in x_1:
+    #     x_sum_x = frac_add(x_sum_x, x_i, bw)
+    #     x_sum_x2 = frac_add(frac_mult(x_i, x_i, bw), x_sum_x2, bw)
     N = len(x)
     x_sum_x /= N
     x_sum_x2 /= N
