@@ -136,7 +136,7 @@ def frac_div(x, y, bw):
 
 def custom_int_softmax(x, bw, term):
     x = x.to(torch.float32)
-    x_clamp = torch.clamp(x, min = - 30, max = 30)
+    x_clamp = torch.clamp(x, min = - 20, max = 30)
     x_max = torch.max(x_clamp)
     x_norm = x_clamp - x_max
     print("before exp", x_max, x_clamp.max(), x_clamp.min())
@@ -146,6 +146,7 @@ def custom_int_softmax(x, bw, term):
     # x_sum = torch.tensor(0)     # can use scale
 
     x_sum = x_exp.sum(dim=-1, keepdim=True)
+    print("sum actual be", x_sum, x_sum.max())
     # for x_i in x_exp:
         # print(x_i)
         # x_sum = frac_add(x_sum, x_i, bw)
