@@ -23,7 +23,7 @@ def asym_quantize(x: torch.Tensor, bits: int):
     scale = (xmax - xmin)*0.9
     print("scale in this, ", scale, scale.max())
     zero = torch.zeros_like(xmax)
-    q = torch.clamp(torch.round((x + zero) / scale), xmin, xmax)
+    q = torch.clamp(torch.round((x + zero) / scale), -xmax, xmax)
 
     return q, scale, zero
 
