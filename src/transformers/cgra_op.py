@@ -148,7 +148,7 @@ def custom_int_layernorm(x, w, b, bw):
     x_1 = (x * int_s).to(torch.int64)
 
     N = x_1.shape[-1]
-    print(N)
+    # print(N)
     x_sum_x = x_1.sum(dim=-1, keepdim=True) / N
     x_sum_x2 = (x_1 ** 2).sum(dim=-1, keepdim=True) / N 
     # for x_i in x_1:
