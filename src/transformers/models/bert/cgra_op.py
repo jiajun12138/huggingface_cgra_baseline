@@ -15,17 +15,27 @@ def get_minq_maxq(bits: int, sym: bool):
 def asym_quantize(x: torch.Tensor, bits: int):
     minq, maxq = get_minq_maxq(bits=bits, sym=False)
     xmax = torch.amax(x, dim=-1, keepdim=True)
-    xmin = torch.zeros_like(xmax)
-    # print("xmax, xmin", xmax, xmin, x.max(), x.min(), maxq)
-    # print("sub", xmax - xmin, "max", (xmax - xmin).max())
-    # print("clamp", ((xmax - xmin)*0.9).clamp(min=1e-5))
-    print("clamp result", ((xmax - xmin)*0.9).max())
-    scale = (xmax - xmin)*0.9
-    print("scale in this, ", scale, scale.max())
-    zero = torch.zeros_like(xmax)
-    q = torch.clamp(torch.round((x + zero) / scale), -xmax, xmax)
+    xmin = torch.amin(x, dim=-1, keepdim=True)
+    scale = (((xmax - xmin)*0.9).clamp(min=1e-5) / maxq)
+    zero = -xmin
+    q = torch.clamp(torch.round((x + zero) / scale), 0, maxq)
 
     return q, scale, zero
+
+# def asym_quantize(x: torch.Tensor, bits: int):
+#     minq, maxq = get_minq_maxq(bits=bits, sym=False)
+#     xmax = torch.amax(x, dim=-1, keepdim=True)
+#     xmin = torch.zeros_like(xmax)
+#     # print("xmax, xmin", xmax, xmin, x.max(), x.min(), maxq)
+#     # print("sub", xmax - xmin, "max", (xmax - xmin).max())
+#     # print("clamp", ((xmax - xmin)*0.9).clamp(min=1e-5))
+#     print("clamp result", ((xmax - xmin)*0.9).max())
+#     scale = (xmax - xmin)*0.9
+#     print("scale in this, ", scale, scale.max())
+#     zero = torch.zeros_like(xmax)
+#     q = torch.clamp(torch.round((x + zero) / scale), -xmax, xmax)
+
+#     return q, scale, zero
 
 def asym_dequantize(q, scale, zero):
     return q * scale - zero
@@ -76,11 +86,9 @@ def frac_exp2(x, bw, term):
 def custom_int_exp(x, bw, term):
     #print(fp_x)
     print("call int exp")
-    input = x*torch.tensor(1.442695)
-
-    _, scale, zero = asym_quantize(input, bw)
-    if scale.max() in [float('inf'), float('-inf')]:
-        print('scale overflow', scale, scale.max(), x.max(), x.min())
+    print("x", x.max(), x.min())
+    fp_x = x.to(torch.float64)
+    input = fp_x * torch.tensor(1.442695)
 
     int_part = torch.floor(input)
     frac_part = input - int_part
@@ -119,12 +127,15 @@ def frac_div(x, y, bw):
     return tmp_x / tmp_y
 
 def custom_int_softmax(x, bw, term):
-    new_x = x.to(torch.float64)
-    print("x", new_x.max(), new_x.min())
-    x_clamp = torch.clamp(new_x, min = - 20, max = 30)
-    x_max = torch.max(x_clamp, -1, keepdim=True)[0]
-    x_norm = x_clamp - x_max
-    x_exp, s = custom_int_exp(x_norm, bw, term)
+    # new_x = x.to(torch.float64)
+    # print("x", new_x.max(), new_x.min())
+    # x_clamp = torch.clamp(new_x, min = - 20, max = 30)
+    # x_max = torch.max(x_clamp, -1, keepdim=True)[0]
+    # x_norm = x_clamp - x_max
+    x_max = torch.max(x, -1, keepdim=True)[0]
+    x = x - x_max
+    # x_exp = custom_int_exp(x.to(dtype=torch.float64), bw, term)
+    x_exp, s = custom_int_exp(x.to(dtype=torch.float64), bw, term)
     if torch.isnan(x_exp).any():
         print('x_exp overflow', x_exp.dtype)
     int_s = 2 ** frac_bits[bw]
