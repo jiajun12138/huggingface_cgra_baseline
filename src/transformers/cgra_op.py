@@ -40,11 +40,9 @@ def frac_mult(x, y, bw):
     tmp_y=(y*(2**(scale-1))).to(torch.int64)
     # print('y: ', y)
     ans = (tmp_x * tmp_y).to(torch.int64)
-    if(ans >= 2 **(bw-1)).any():
+    if(ans >= 2 **(2 * bw-1)).any():
         print('multiplication overflow')
-    ans[ans >= 2 ** (bw - 1)] = (2 ** (bw - 1)) - 1
-    # ans[ans >= 2 ** (bw - 1)] = (2 ** (bw - 1)) - 1
-    # print(ans)
+    ans[ans >= 2 ** (2*bw - 1)] = (2 ** (2*bw - 1)) - 1
     result = (ans/(2**(scale-1))).to(torch.int64)
     return result/(2**(scale-1))
 
@@ -129,7 +127,7 @@ def custom_int_softmax(x, bw, term):
     int_s = 2 ** frac_bits[bw]
     x_exp = (x_exp * int_s).to(torch.int64)
     x_sum = x_exp.sum(dim=-1, keepdim=True)
-    if torch.isnan(x_sum).any() or x_sum.max() >= int_s:
+    if torch.isnan(x_sum).any():
         print('x_sum overflow', x_sum.dtype)
     # print("sum should be", x_exp.sum(dim=-1, keepdim=True), x_sum.max())
 
