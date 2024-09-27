@@ -56,6 +56,7 @@ def frac_exp2(x, bw, term):
 
 def custom_int_exp(x, bw, term):
     fp_x = x.to(torch.float64)
+    print('fp_x', fp_x, fp_x.max(), fp_x.min())
 
     input = fp_x*torch.tensor(1.44238)
     int_part = torch.floor(input)
