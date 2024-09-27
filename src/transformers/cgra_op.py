@@ -82,12 +82,13 @@ def custom_int_gelu(x, bw, term):
     #return 0.5*x*tanh_plus1
 
 def custom_int_exp(x, bw, term):
-    q, scale, zero = asym_quantize(x, bw)
+    #print(fp_x)
+    input = fp_x*torch.tensor(1.442695)
+
+    _, scale, zero = asym_quantize(input, bw)
     if scale.max() in [float('inf'), float('-inf')]:
         print('scale overflow', scale, scale.max(), x.max(), x.min())
-    fp_x = asym_dequantize(q, scale, zero)
-    #print(fp_x)
-    input = fp_x*torch.tensor(1.44238)
+
     int_part = torch.floor(input)
     frac_part = input - int_part
     #print(frac_part)
@@ -128,10 +129,10 @@ def custom_int_softmax(x, bw, term):
     x_max = torch.max(x)
     x_norm = x - x_max
     print("before exp", x_max, x.max(), x.min())
+    print("x_norm", x_norm, x_norm.max(), x_norm.min())
     x_exp, s = custom_int_exp(x_norm, bw, term)
-    ln2 = torch.log(torch.tensor(2))
-    #print("sum should be", x_exp.sum(), x_exp.max(), s)
-    x_sum = torch.tensor(0)
+    print("sum should be", x_exp.sum(), x_exp.max(), s)
+    x_sum = torch.tensor(0)     # can use scale
     for x_i in x_exp:
         # print(x_i)
         x_sum = frac_add(x_sum, x_i, bw)
