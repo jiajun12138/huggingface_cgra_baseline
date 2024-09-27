@@ -391,7 +391,7 @@ class OPTDecoderLayer(nn.Module):
         self.do_layer_norm_before = config.do_layer_norm_before
         self.dropout = config.dropout
         self.activation_fn = ACT2FN[config.activation_function]
-        self.bw = config.softmax_bw
+        self.softmax_bw = config.softmax_bw
         
         self.self_attn_layer_norm = nn.LayerNorm(
             self.embed_dim, elementwise_affine=config.layer_norm_elementwise_affine
