@@ -15,7 +15,7 @@ def get_minq_maxq(bits: int, sym: bool):
 def asym_quantize(x: torch.Tensor, bits: int):
     minq, maxq = get_minq_maxq(bits=bits, sym=False)
     xmax = torch.amax(x, dim=-1, keepdim=True)
-    xmin = torch.zeros_like(xmax)
+    xmin = -torch.zeros_like(xmax)
     # print("xmax, xmin", xmax, xmin, x.max(), x.min(), maxq)
     # print("sub", xmax - xmin, "max", (xmax - xmin).max())
     # print("clamp", ((xmax - xmin)*0.9).clamp(min=1e-5))
@@ -41,22 +41,26 @@ def frac_mult(x, y, bw):
     return result/(2**(bw-1))
 
 def frac_exp2(x, bw, term):
-    result = torch.zeros_like(x)
-    factorial = 1
+    # q, scale, zero = asym_quantize(x, bw)
+    # result = torch.zeros_like(x)
+    # factorial = 1
     ln2 = torch.log(torch.tensor(2))
-    ln2 = (ln2*(2**(bw-1))).to(torch.int)/(2**(bw-1))
-    if torch.isnan(ln2).any():
-        print('ln2 overflow', ln2.dtype)    
-    power = torch.ones_like(x)
+    scale1 = ln2
+    q1 = 1.5 / scale1
+    scale2 = scale1 ** 2 / 6
+    q2 = 0.625 / scale2
+    scale3 = scale2 * ln2
+    q3 = 1.0 / scale3
+    if term == 3:
+        tmp1 = frac_add(x, q1, bw)
+        tmp2 = frac_mult(tmp1, tmp1, bw)
+        tmp3 = frac_add(tmp2, q2, bw)
+        tmp4 = frac_mult(tmp3, x, bw)
+        result = frac_add(tmp4, q3, bw)
+    else:
+        assert False
 
-    for n in range(term):
-        result += power / factorial
-        power = frac_mult(power, x, bw)
-        power = frac_mult(power, ln2, bw)
-
-        factorial *= (n + 1)
-
-    return result
+  return result, scale3
 
 def custom_int_tanh(x, bw, term):
     x = x.to(dtype=torch.float64)
