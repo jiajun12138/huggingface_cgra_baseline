@@ -115,3 +115,6 @@ def custom_int_softmax(x, bw, term):
     
     #return x_exp / x_sum
     return frac_div(x_exp, x_sum, bw)
+
+def custom_int_gelu(x, bw, term):
+    raise NotImplementedError
