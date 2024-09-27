@@ -31,14 +31,22 @@ def asym_dequantize(q, scale, zero):
     return q * scale - zero
 
 def frac_mult(x, y, bw):
-    x=(x*(2**(bw-1))).to(torch.int64)
-    y=(y*(2**(bw-1))).to(torch.int64)
-    if torch.isnan(x).any():
-        print('frac_mult overflow', x.dtype)
-    ans = (x * y).to(torch.int64)
-
-    result = (ans/(2**(bw-1))).to(torch.int64)
-    return result/(2**(bw-1))
+    #print(x)
+    # print(x,y)
+    scale = frac_bits[bw]
+    tmp_x=(x*(2**(scale-1))).to(torch.int64)
+    # print('x: ', x)
+    # print(y)
+    tmp_y=(y*(2**(scale-1))).to(torch.int64)
+    # print('y: ', y)
+    ans = (tmp_x * tmp_y).to(torch.int64)
+    if(ans >=2 **(bw-1)).any():
+        print('multiplication overflow')
+    ans[ans >= 2 ** (bw - 1)] = (2 ** (bw - 1)) - 1
+    # ans[ans >= 2 ** (bw - 1)] = (2 ** (bw - 1)) - 1
+    # print(ans)
+    result = (ans/(2**(scale-1))).to(torch.int64)
+    return result/(2**(scale-1))
 
 def frac_exp2(x, bw, term):
     # q, scale, zero = asym_quantize(x, bw)
@@ -83,7 +91,7 @@ def custom_int_gelu(x, bw, term):
 
 def custom_int_exp(x, bw, term):
     #print(fp_x)
-    input = fp_x*torch.tensor(1.442695)
+    input = x*torch.tensor(1.442695)
 
     _, scale, zero = asym_quantize(input, bw)
     if scale.max() in [float('inf'), float('-inf')]:
