@@ -1,6 +1,6 @@
 import torch, math
 
-frac_bits = {8:3, 16: 8, 32: 8}
+frac_bits = {8:3, 16: 7, 32: 8}
 
 def get_minq_maxq(bits: int, sym: bool):
     if sym:
@@ -15,15 +15,15 @@ def get_minq_maxq(bits: int, sym: bool):
 def asym_quantize(x: torch.Tensor, bits: int):
     minq, maxq = get_minq_maxq(bits=bits, sym=False)
     xmax = torch.amax(x, dim=-1, keepdim=True)
-    xmin = -torch.zeros_like(xmax)
+    xmin = torch.zeros_like(xmax)
     # print("xmax, xmin", xmax, xmin, x.max(), x.min(), maxq)
     # print("sub", xmax - xmin, "max", (xmax - xmin).max())
     # print("clamp", ((xmax - xmin)*0.9).clamp(min=1e-5))
     print("clamp result", ((xmax - xmin)*0.9).max())
-    scale = (((xmax - xmin)*0.9) )
+    scale = (xmax - xmin)*0.9
     print("scale in this, ", scale, scale.max())
-    zero = -xmin
-    q = torch.clamp(torch.round((x + zero) / scale), -xmax, xmax)
+    zero = torch.zeros_like(xmax)
+    q = torch.clamp(torch.round((x + zero) / scale), xmin, xmax)
 
     return q, scale, zero
 
