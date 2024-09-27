@@ -1,5 +1,7 @@
 import torch, math
 
+frac_bits = {8:3, 16: 8, 32: 8}
+
 def get_minq_maxq(bits: int, sym: bool):
     if sym:
         maxq = torch.tensor(2**(bits-1)-1)
@@ -13,7 +15,7 @@ def get_minq_maxq(bits: int, sym: bool):
 def asym_quantize(x: torch.Tensor, bits: int):
     minq, maxq = get_minq_maxq(bits=bits, sym=False)
     xmax = torch.amax(x, dim=-1, keepdim=True)
-    xmin = torch.amin(x, dim=-1, keepdim=True)
+    xmin = -xmax
     print("xmax, xmin", xmax, xmin, x.max(), x.min(), maxq)
     print("sub", xmax - xmin, "max", (xmax - xmin).max())
     print("clamp", ((xmax - xmin)*0.9).clamp(min=1e-5))
