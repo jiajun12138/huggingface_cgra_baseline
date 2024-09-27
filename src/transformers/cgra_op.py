@@ -1,6 +1,6 @@
 import torch, math
 
-frac_bits = {8:3, 16: 7, 32: 8}
+frac_bits = {8:3, 16: 6, 32: 8}
 
 def get_minq_maxq(bits: int, sym: bool):
     if sym:
@@ -142,7 +142,7 @@ def custom_int_softmax(x, bw, term):
     print("before exp", x_max, x_clamp.max(), x_clamp.min())
     print("x_norm", x_norm, x_norm.max(), x_norm.min())
     x_exp, s = custom_int_exp(x_norm, bw, term)
-    print("sum should be", x_exp.sum(), x_exp.max(), s)
+    print("sum should be", x_exp.sum(dim=-1, keepdim=True), x_exp.max(), s)
     # x_sum = torch.tensor(0)     # can use scale
 
     x_sum = x_exp.sum(dim=-1, keepdim=True)
