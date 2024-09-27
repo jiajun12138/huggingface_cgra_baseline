@@ -20,9 +20,6 @@ def asym_quantize(x: torch.Tensor, bits: int):
 
     return q, scale, zero
 
-def custom_int_gelu(x, bw, term):
-    raise NotImplementedError
-
 def asym_dequantize(q, scale, zero):
     return q * scale - zero
 
@@ -54,9 +51,14 @@ def frac_exp2(x, bw, term):
 
     return result
 
+count = 0
+
 def custom_int_exp(x, bw, term):
     fp_x = x.to(torch.float64)
-    print('fp_x', fp_x, fp_x.max(), fp_x.min())
+
+    count += 1
+    if count < 5:
+        print('x', fp_x.max(), fp_x.min(), fp_x.mean())
 
     input = fp_x*torch.tensor(1.44238)
     int_part = torch.floor(input)
