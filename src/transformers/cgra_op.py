@@ -135,6 +135,8 @@ def custom_int_softmax(x, bw, term):
     # return frac_div(x_exp, x_sum, bw)
     # return x_exp / x_sum
 
+count = {"1":0}
+
 def custom_int_layernorm(x, w, b, bw):
     eps = 1e-5
     x_sum_x = torch.tensor(0)
@@ -155,7 +157,8 @@ def custom_int_layernorm(x, w, b, bw):
         bias = 0.0
     else:
         bias = b
-    # print("statistics:", scale, x_sum_x * scale, x_sum_x2 * scale ** 2, x.mean(), (x**2).mean())
+    count["1"] += 1
+    if count["1"] <= 5:
+        print("statistics:", scale, x_sum_x * scale, x_sum_x2 * scale ** 2, x.mean(), (x**2).mean())
     invsqrt = 1.0 / (x_sum_x2 * scale ** 2 + eps).sqrt()
     return frac_add(frac_mult(frac_mult(invsqrt, frac_add(x, -x_sum_x, bw), bw), weight, bw), bias, bw)
-  # return w * x_  + b
