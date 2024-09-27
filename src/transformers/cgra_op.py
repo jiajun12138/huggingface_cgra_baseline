@@ -140,12 +140,15 @@ def custom_int_softmax(x, bw, term):
     x_norm = x - x_max
     print("before exp", x_max, x.max(), x.min())
     print("x_norm", x_norm, x_norm.max(), x_norm.min())
+    x_norm = torch.clamp(x_norm, min = - 2 ** (bw - 1), max = 2 ** (bw - 1) - 1)
     x_exp, s = custom_int_exp(x_norm, bw, term)
     print("sum should be", x_exp.sum(), x_exp.max(), s)
-    x_sum = torch.tensor(0)     # can use scale
-    for x_i in x_exp:
+    # x_sum = torch.tensor(0)     # can use scale
+
+    x_sum = x_exp.sum(dim=-1, keepdim=True)
+    # for x_i in x_exp:
         # print(x_i)
-        x_sum = frac_add(x_sum, x_i, bw)
+        # x_sum = frac_add(x_sum, x_i, bw)
         # print(x_i)
         # print(x_exp, x.exp(), x_sum)
         #print("sum actual be", x_sum)
