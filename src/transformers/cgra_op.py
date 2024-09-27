@@ -15,15 +15,15 @@ def get_minq_maxq(bits: int, sym: bool):
 def asym_quantize(x: torch.Tensor, bits: int):
     minq, maxq = get_minq_maxq(bits=bits, sym=False)
     xmax = torch.amax(x, dim=-1, keepdim=True)
-    xmin = -xmax
-    print("xmax, xmin", xmax, xmin, x.max(), x.min(), maxq)
-    print("sub", xmax - xmin, "max", (xmax - xmin).max())
-    print("clamp", ((xmax - xmin)*0.9).clamp(min=1e-5))
+    xmin = torch.zeros_like(xmax)
+    # print("xmax, xmin", xmax, xmin, x.max(), x.min(), maxq)
+    # print("sub", xmax - xmin, "max", (xmax - xmin).max())
+    # print("clamp", ((xmax - xmin)*0.9).clamp(min=1e-5))
     print("clamp result", ((xmax - xmin)*0.9).clamp(min=1e-5).max())
-    scale = (((xmax - xmin)*0.9).clamp(min=1e-5) / maxq)
+    scale = (((xmax - xmin)*0.9).clamp(min=1e-5) )
     print("scale in this, ", scale, scale.max())
     zero = -xmin
-    q = torch.clamp(torch.round((x + zero) / scale), 0, maxq)
+    q = torch.clamp(torch.round((x + zero) / scale), 0, xmax)
 
     return q, scale, zero
 
