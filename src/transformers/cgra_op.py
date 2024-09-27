@@ -145,26 +145,29 @@ def custom_int_layernorm(x, w, b, bw):
     x_1 = x / scale
 
     int_s = 2 ** frac_bits[bw]
-    x_1 = (x_1 * int_s).to(torch.int64)
+    x_1 = (x * int_s).to(torch.int64)
 
-    x_sum_x = x_1.sum(dim=-1, keepdim=True)
-    x_sum_x2 = (x_1 ** 2).sum(dim=-1, keepdim=True)
+    N = x_1.shape[-1]
+    print(N)
+    x_sum_x = x_1.sum(dim=-1, keepdim=True) / N
+    x_sum_x2 = (x_1 ** 2).sum(dim=-1, keepdim=True) / N 
     # for x_i in x_1:
     #     x_sum_x = frac_add(x_sum_x, x_i, bw)
     #     x_sum_x2 = frac_add(frac_mult(x_i, x_i, bw), x_sum_x2, bw)
-    N = len(x)
-    x_sum_x /= N
-    x_sum_x2 /= N
+    # x_sum_x /= N
+    # x_sum_x2 /= N
     if w is None:
         weight = 1.0
     else:
-        weight = want
+        weight = w
     if b is None:
         bias = 0.0
     else:
         bias = b
     count["1"] += 1
     if count["1"] <= 5:
-        print("statistics:", scale, x_sum_x * scale, x_sum_x2 * scale ** 2, x.mean(), (x**2).mean())
-    invsqrt = 1.0 / (x_sum_x2 * scale ** 2 + eps).sqrt()
-    return frac_add(frac_mult(frac_mult(invsqrt, frac_add(x, -x_sum_x, bw), bw), weight, bw), bias, bw)
+        print("statistics:", scale, x_sum_x, x_1.mean(dim=-1, keepdim=True, dtype=x_sum_x.dtype))
+    invsqrt = 1.0 / (x_sum_x2 - (x_sum_x ** 2) + eps).sqrt()
+    # prrint(invsqrt, 1.0 / (x_1.var()))
+    ans = w * (x_1 - x_sum_x) * invsqrt + b
+    return ans.to(torch.float64)
