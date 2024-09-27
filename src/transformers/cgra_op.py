@@ -1,6 +1,6 @@
 import torch, math
 
-frac_bits = {8:3, 16: 6, 32: 8}
+frac_bits = {8:3, 16: 7, 32: 8}
 
 def get_minq_maxq(bits: int, sym: bool):
     if sym:
@@ -40,7 +40,7 @@ def frac_mult(x, y, bw):
     tmp_y=(y*(2**(scale-1))).to(torch.int64)
     # print('y: ', y)
     ans = (tmp_x * tmp_y).to(torch.int64)
-    if(ans >=2 **(bw-1)).any():
+    if(ans >= 2 **(bw-1)).any():
         print('multiplication overflow')
     ans[ans >= 2 ** (bw - 1)] = (2 ** (bw - 1)) - 1
     # ans[ans >= 2 ** (bw - 1)] = (2 ** (bw - 1)) - 1
@@ -70,26 +70,6 @@ def frac_exp2(x, bw, term):
 
     return result, scale3
 
-# def custom_int_tanh(x, bw, term):
-#     x = x.to(dtype=torch.float64)
-#     exp_2x = custom_int_exp(frac_mult(frac_mult(torch.tensor(-2.0), x, bw), x, bw), bw, term)
-#     #exp_2x = custom_int_exp(x*(-2)*x, 32, 3)
-#     tanh_x = frac_add(torch.tensor(1.0), -exp_2x, bw) / frac_add(torch.tensor(1.0), exp_2x, bw)
-#     #tanh_x = (1-exp_2x)/(1+exp_2x)
-#     return tanh_x
-
-def custom_int_gelu(x, bw, term):
-    raise NotImplementedError
-#     x = x.to(dtype=torch.float64)
-#     x_3 = frac_mult(frac_mult(frac_mult(x, x, bw), x, bw), torch.tensor(0.044715), bw)
-#     #x_3=x*x*x
-#     # print(x, frac_mult(x, x, bw), x**3)
-#     tanh = custom_int_tanh(x_3, bw, term)
-#     tanh_plus1 = frac_add(torch.tensor(1.0), tanh, bw)
-#     #tanh_plus1 = 1+ tanh
-#     return frac_mult(frac_mult(torch.tensor(0.5), x, bw), tanh_plus1, bw)
-    #return 0.5*x*tanh_plus1
-
 def custom_int_exp(x, bw, term):
     #print(fp_x)
     input = x*torch.tensor(1.442695)
@@ -117,8 +97,8 @@ def frac_add(x, y, bw):
     tmp_y=(y*(2**(scale-1))).to(torch.int64)
     #print('y: ', y)
     ans = tmp_x + tmp_y
-    if(ans >=2 **(bw-1)).any():
-      print('addition overflow')
+    # if(ans >=2 **(bw-1)).any():
+    #   print('addition overflow')
     ans[ans >= 2 ** (bw - 1)] = (2 ** (bw - 1)) - 1
     result = ans.to(torch.int64)
     return result/(2**(scale-1))
@@ -139,24 +119,17 @@ def custom_int_softmax(x, bw, term):
     print("x", new_x.max(), new_x.min())
     x_clamp = torch.clamp(new_x, min = - 20, max = 30)
     x_max = torch.max(x_clamp, -1, keepdim=True)[0]
-    # x_max = torch.max(x_clamp)
     x_norm = x_clamp - x_max
-    print("before exp", x_max, x_clamp.max(), x_clamp.min())
-    print("x_norm", x_norm, x_norm.max(), x_norm.min())
     x_exp, s = custom_int_exp(x_norm, bw, term)
     if torch.isnan(x_exp).any():
         print('x_exp overflow', x_exp.dtype)
-    print("sum should be", x_exp.sum(dim=-1, keepdim=True), x_exp.max(), s)
-    # x_sum = torch.tensor(0)     # can use scale
-
+    int_s = 2 ** frac_bits[bw]
+    x_exp = (x_exp * int_s).to(torch.int64)
     x_sum = x_exp.sum(dim=-1, keepdim=True)
-    print("sum actual be", x_sum, x_sum.max())
-    # for x_i in x_exp:
-        # print(x_i)
-        # x_sum = frac_add(x_sum, x_i, bw)
-        # print(x_i)
-        # print(x_exp, x.exp(), x_sum)
-        #print("sum actual be", x_sum)
+    if torch.isnan(x_sum).any() or x_sum.max() >= int_s:
+        print('x_sum overflow', x_sum.dtype)
+    # print("sum should be", x_exp.sum(dim=-1, keepdim=True), x_sum.max())
 
-    return frac_div(x_exp, x_sum, bw)
+    return x_exp.to(torch.float64) / x_sum.to(torch.float64)
+    # return frac_div(x_exp, x_sum, bw)
     # return x_exp / x_sum
