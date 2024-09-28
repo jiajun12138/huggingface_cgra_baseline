@@ -82,7 +82,7 @@ def custom_int_exp(x, bw, term):
     frac_part = input - int_part
     #print(frac_part)
     #print(int_part)
-    max_int_scale = 2 ** int(input.max() * 0.9)
+    max_int_scale = 2 ** 4
     #print(max_int_scale)
     q, scale = frac_exp2(frac_part, bw, term)
     q = q * torch.pow(2, int_part) / max_int_scale
