@@ -113,8 +113,8 @@ class OPTConfig(PretrainedConfig):
         layer_norm_elementwise_affine=True,
         custom_softmax=False,
         softmax_int=False,
-        softmax_bw=32,
-        softmax_term=5,
+        softmax_bw=None,
+        softmax_term=None,
         **kwargs,
     ):
         super().__init__(

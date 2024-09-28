@@ -52,7 +52,7 @@ from ...utils import (
 from ...utils.model_parallel_utils import assert_device_map, get_device_map
 from .configuration_gpt2 import GPT2Config
 
-from ...cgra_op import custom_int_softmax, custom_int_gelu
+from ...cgra_op import custom_int_softmax, custom_int_gelu, custom_int_layernorm
 
 if is_flash_attn_2_available():
     from ...modeling_flash_attention_utils import _flash_attention_forward
@@ -138,6 +138,9 @@ class GPT2Attention(nn.Module):
         self.num_heads = config.num_attention_heads
         self.head_dim = self.embed_dim // self.num_heads
         self.split_size = self.embed_dim
+        self.softmax_int=config.softmax_int
+        self.softmax_bw=config.softmax_bw
+        self.softmax_term=config.softmax_term
         if self.head_dim * self.num_heads != self.embed_dim:
             raise ValueError(
                 f"`embed_dim` must be divisible by num_heads (got `embed_dim`: {self.embed_dim} and `num_heads`:"
@@ -206,7 +209,21 @@ class GPT2Attention(nn.Module):
             # Apply the attention mask
             attn_weights = attn_weights + attention_mask
 
-        attn_weights = nn.functional.softmax(attn_weights, dim=-1)
+        if attn_weights.dtype == torch.float16:
+            if self.custom_softmax:
+                if self.softmax_int:
+                    attn_weights = custom_int_softmax(attn_weights, self.softmax_bw, self.softmax_term).to(attn_weights)
+                    #print(torch.isnan(attn_weights).any())
+            else:
+                attn_weights = nn.functional.softmax(attn_weights, dim=-1, dtype=torch.float32).to(torch.float16)
+        else:
+            if self.custom_softmax:
+                if self.softmax_int:
+                    attn_weights = custom_int_softmax(attn_weights, self.softmax_bw, self.softmax_term).to(attn_weights)
+                    #print(torch.isnan(attn_weights).any())
+            else:
+                attn_weights = nn.functional.softmax(attn_weights, dim=-1)
+        # attn_weights = nn.functional.softmax(attn_weights, dim=-1)
 
         # Downcast (if necessary) back to V's dtype (if in mixed-precision) -- No-Op otherwise
         attn_weights = attn_weights.type(value.dtype)
@@ -595,6 +612,7 @@ class GPT2Block(nn.Module):
 
         self.ln_1 = nn.LayerNorm(hidden_size, eps=config.layer_norm_epsilon)
         self.attn = attention_class(config=config, layer_idx=layer_idx)
+        self.softmax_bw = config.softmax_bw
         self.ln_2 = nn.LayerNorm(hidden_size, eps=config.layer_norm_epsilon)
 
         if config.add_cross_attention:
@@ -615,7 +633,12 @@ class GPT2Block(nn.Module):
         output_attentions: Optional[bool] = False,
     ) -> Union[Tuple[torch.Tensor], Optional[Tuple[torch.Tensor, Tuple[torch.FloatTensor, ...]]]]:
         residual = hidden_states
-        hidden_states = self.ln_1(hidden_states)
+        
+        if self.softmax_bw is not None:
+            hidden_states = custom_int_layernorm(hidden_states, self.ln_1.weight, self.ln_1.bias, self.softmax_bw)
+        else:
+            hidden_states = self.ln_1(hidden_states)
+        # hidden_states = self.ln_1(hidden_states)
         attn_outputs = self.attn(
             hidden_states,
             layer_past=layer_past,
@@ -637,7 +660,12 @@ class GPT2Block(nn.Module):
                     "cross-attention layers by setting `config.add_cross_attention=True`"
                 )
             residual = hidden_states
-            hidden_states = self.ln_cross_attn(hidden_states)
+            if self.do_layer_norm_before:
+                if self.softmax_bw is not None:
+                    hidden_states = custom_int_layernorm(hidden_states, self.ln_cross_attn.weight, self.ln_cross_attn.bias, self.softmax_bw)
+                else:
+                    hidden_states = self.ln_cross_attn(hidden_states)
+            # hidden_states = self.ln_cross_attn(hidden_states)
             cross_attn_outputs = self.crossattention(
                 hidden_states,
                 attention_mask=attention_mask,
@@ -652,7 +680,11 @@ class GPT2Block(nn.Module):
             outputs = outputs + cross_attn_outputs[2:]  # add cross attentions if we output attention weights
 
         residual = hidden_states
-        hidden_states = self.ln_2(hidden_states)
+        if self.softmax_bw is not None:
+            hidden_states = custom_int_layernorm(hidden_states, self.ln_2.weight, self.ln_2.bias, self.softmax_bw)
+        else:
+            hidden_states = self.ln_2(hidden_states)
+        # hidden_states = self.ln_2(hidden_states)
         feed_forward_hidden_states = self.mlp(hidden_states)
         # residual connection
         hidden_states = residual + feed_forward_hidden_states

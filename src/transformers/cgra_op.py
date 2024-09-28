@@ -15,13 +15,15 @@ def get_minq_maxq(bits: int, sym: bool):
 def asym_quantize(x: torch.Tensor, bits: int):
     minq, maxq = get_minq_maxq(bits=bits, sym=False)
     xmax = torch.amax(x, dim=-1, keepdim=True)
-    xmin = torch.zeros_like(xmax)
+    xmin = torch.amin(x, dim=-1, keepdim=True)
     # print("xmax, xmin", xmax, xmin, x.max(), x.min(), maxq)
     # print("sub", xmax - xmin, "max", (xmax - xmin).max())
     # print("clamp", ((xmax - xmin)*0.9).clamp(min=1e-5))
-    print("clamp result", ((xmax - xmin)*0.9).max())
+    # print("clamp result", ((xmax - xmin)*0.9).max())
     scale = (xmax - xmin)*0.9
-    print("scale in this, ", scale, scale.max())
+    if scale.max() == 0:
+        scale = torch.tensor(1.0)
+    # print("scale in this, ", scale, scale.max())
     zero = torch.zeros_like(xmax)
     q = torch.clamp(torch.round((x + zero) / scale), -xmax, xmax)
 
@@ -112,8 +114,30 @@ def frac_div(x, y, bw):
     #print('y: ', y)
     return tmp_x / tmp_y
 
+import math
+
+def custom_int_tanh(x, bw, term):
+    exp_2x, scale = custom_int_exp(frac_mult(torch.tensor(-2.0), x, bw), bw, term)
+    q = 1.0 / scale
+    tanh_x = frac_add(q, -exp_2x, bw) / frac_add(q, exp_2x, bw)
+    return tanh_x
+
 def custom_int_gelu(x, bw, term):
-    raise NotImplementedError
+    q, scale, zero = asym_quantize(x, bw)
+    
+    scale1 = scale ** 2 * 0.044715 * (math.sqrt(2 / math.pi) ) 
+    q1 = 1.0 / scale1
+    
+    x_2 = frac_mult(q, q, bw)
+    x_2_tmp = frac_add(x_2, q1, bw)
+    x_3 = frac_mult(q, x_2_tmp, bw)
+
+    print(x_3 * scale1)
+
+    tanh = custom_int_tanh(x_3 * scale1, bw, term)
+    tanh_plus1 = frac_add(torch.tensor(1.0), tanh, bw)
+
+    return frac_mult(q, tanh_plus1, bw) * scale * 0.5
 
 def custom_int_softmax(x, bw, term):
     new_x = x.to(torch.float64)
