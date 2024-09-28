@@ -15,7 +15,7 @@ def get_minq_maxq(bits: int, sym: bool):
 def asym_quantize(x: torch.Tensor, bits: int):
     minq, maxq = get_minq_maxq(bits=bits, sym=False)
     xmax = torch.amax(x, dim=-1, keepdim=True)
-    xmin = torch.amin(x, dim=-1, keepdim=True)
+    xmin = torch.zeros_like(xmax)
     # print("xmax, xmin", xmax, xmin, x.max(), x.min(), maxq)
     # print("sub", xmax - xmin, "max", (xmax - xmin).max())
     # print("clamp", ((xmax - xmin)*0.9).clamp(min=1e-5))
