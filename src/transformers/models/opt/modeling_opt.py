@@ -429,7 +429,7 @@ class OPTDecoderLayer(nn.Module):
 
         # 125m, 1.7B, ..., 175B applies layer norm BEFORE attention
         if self.do_layer_norm_before:
-            if softmax_bw is not None:
+            if self.softmax_bw is not None:
                 hidden_states = custom_int_layernorm(hidden_states, self.self_attn_layer_norm.weight, self.self_attn_layer_norm.bias, self.softmax_bw)
             else:
                 hidden_states = self.self_attn_layer_norm(hidden_states)
