@@ -138,6 +138,7 @@ class GPT2Attention(nn.Module):
         self.num_heads = config.num_attention_heads
         self.head_dim = self.embed_dim // self.num_heads
         self.split_size = self.embed_dim
+        self.custom_softmax = config.custom_softmax
         self.softmax_int=config.softmax_int
         self.softmax_bw=config.softmax_bw
         self.softmax_term=config.softmax_term
