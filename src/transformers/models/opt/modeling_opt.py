@@ -447,7 +447,10 @@ class OPTDecoderLayer(nn.Module):
 
         # 350m applies layer norm AFTER attention
         if not self.do_layer_norm_before:
-            hidden_states = self.self_attn_layer_norm(hidden_states)
+            if self.softmax_bw is not None:
+                hidden_states = custom_int_layernorm(hidden_states, self.self_attn_layer_norm.weight, self.self_attn_layer_norm.bias, self.softmax_bw)
+            else:
+                hidden_states = self.self_attn_layer_norm(hidden_states)
 
         # Fully Connected
         hidden_states_shape = hidden_states.shape
@@ -456,7 +459,10 @@ class OPTDecoderLayer(nn.Module):
 
         # 125m, 1.7B, ..., 175B applies layer norm BEFORE attention
         if self.do_layer_norm_before:
-            hidden_states = self.final_layer_norm(hidden_states)
+            if self.softmax_bw is not None:
+                hidden_states = custom_int_layernorm(hidden_states, self.final_layer_norm.weight, self.final_layer_norm.bias, self.softmax_bw)
+            else:
+                hidden_states = self.final_layer_norm(hidden_states)
 
         hidden_states = self.fc1(hidden_states)
         hidden_states = self.activation_fn(hidden_states)
@@ -473,7 +479,10 @@ class OPTDecoderLayer(nn.Module):
 
         # 350m applies layer norm AFTER attention
         if not self.do_layer_norm_before:
-            hidden_states = self.final_layer_norm(hidden_states)
+            if self.softmax_bw is not None:
+                hidden_states = custom_int_layernorm(hidden_states, self.final_layer_norm.weight, self.final_layer_norm.bias, self.softmax_bw)
+            else:
+                hidden_states = self.final_layer_norm(hidden_states)
 
         outputs = (hidden_states,)
 
@@ -603,6 +612,7 @@ class OPTDecoder(OPTPreTrainedModel):
         self.padding_idx = config.pad_token_id
         self.max_target_positions = config.max_position_embeddings
         self.vocab_size = config.vocab_size
+        self.softmax_bw = config.softmax_bw
 
         self.embed_tokens = nn.Embedding(config.vocab_size, config.word_embed_proj_dim, self.padding_idx)
         self.embed_positions = OPTLearnedPositionalEmbedding(config.max_position_embeddings, config.hidden_size)
@@ -817,7 +827,10 @@ class OPTDecoder(OPTPreTrainedModel):
                 all_self_attns += (layer_outputs[1],)
 
         if self.final_layer_norm is not None:
-            hidden_states = self.final_layer_norm(hidden_states)
+            if self.softmax_bw is not None:
+                hidden_states = custom_int_layernorm(hidden_states, self.final_layer_norm.weight, self.final_layer_norm.bias, self.softmax_bw)
+            else:
+                hidden_states = self.final_layer_norm(hidden_states)
 
         if self.project_out is not None:
             hidden_states = self.project_out(hidden_states)
