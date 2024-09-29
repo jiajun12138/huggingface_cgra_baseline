@@ -73,6 +73,7 @@ def frac_exp2(x, bw, term):
 def custom_int_exp(x, bw, term):
     #print(fp_x)
     input = x*torch.tensor(1.442695)
+    print("input:", input, input.max(), input.min())
 
     # _, scale, zero = asym_quantize(input, bw)
     # if scale.max() in [float('inf'), float('-inf')]:
@@ -138,7 +139,7 @@ def custom_int_gelu(x, bw, term):
     x_2_tmp = frac_add(x_2, q1, bw)
     x_3 = frac_mult(q, x_2_tmp, bw)
 
-    print(x_3 * scale1)
+    # print(x_3 * scale1)
 
     tanh = custom_int_tanh(x_3 * scale1, bw, term)
     tanh_plus1 = frac_add(torch.tensor(1.0), tanh, bw)
@@ -147,7 +148,6 @@ def custom_int_gelu(x, bw, term):
 
 def custom_int_softmax(x, bw, term):
     new_x = x.to(torch.float64)
-    # print("x", new_x.max(), new_x.min())
     # x_clamp = torch.clamp(new_x, min = - 20, max = 30)
     x_max = torch.max(new_x, -1, keepdim=True)[0]
     x_norm = new_x - x_max
