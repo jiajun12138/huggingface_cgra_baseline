@@ -73,7 +73,7 @@ def frac_exp2(x, bw, term):
 def custom_int_exp(x, bw, term):
     #print(fp_x)
     input = x*torch.tensor(1.442695)
-    print("input:", input, input.max(), input.min())
+    # print("input:", input, input.max(), input.min())
 
     # _, scale, zero = asym_quantize(input, bw)
     # if scale.max() in [float('inf'), float('-inf')]:
@@ -168,6 +168,8 @@ def custom_int_softmax(x, bw, term):
 count = {"1":0}
 
 def custom_int_layernorm(x, w, b, bw):
+    if torch.isnan(x).any():
+        print('before ln x overflow', x.dtype)
     eps = 1e-5
     # x_sum_x = torch.tensor(0)
     # x_sum_x2 = torch.tensor(0)
@@ -200,4 +202,6 @@ def custom_int_layernorm(x, w, b, bw):
     invsqrt = 1.0 / (x_sum_x2 - (x_sum_x ** 2) + eps).sqrt()
     # prrint(invsqrt, 1.0 / (x_1.var()))
     ans = w * (x_1 - x_sum_x) * invsqrt + b
+    if torch.isnan(ans).any():
+        print('ln overflow', ans.dtype)
     return ans.to(x.dtype)
