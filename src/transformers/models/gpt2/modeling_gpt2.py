@@ -214,14 +214,14 @@ class GPT2Attention(nn.Module):
             if self.custom_softmax:
                 if self.softmax_int:
                     attn_weights = custom_int_softmax(attn_weights, self.softmax_bw, self.softmax_term).to(attn_weights)
-                    print(torch.isnan(attn_weights).any())
+                    # print(torch.isnan(attn_weights).any())
             else:
                 attn_weights = nn.functional.softmax(attn_weights, dim=-1, dtype=torch.float32).to(torch.float16)
         else:
             if self.custom_softmax:
                 if self.softmax_int:
                     attn_weights = custom_int_softmax(attn_weights, self.softmax_bw, self.softmax_term).to(attn_weights)
-                    print(torch.isnan(attn_weights).any())
+                    # print(torch.isnan(attn_weights).any())
             else:
                 attn_weights = nn.functional.softmax(attn_weights, dim=-1)
         # attn_weights = nn.functional.softmax(attn_weights, dim=-1)
@@ -640,8 +640,8 @@ class GPT2Block(nn.Module):
         if torch.isnan(hidden_states).any():
             print('before ln1 overflow', hidden_states.dtype)
         if self.softmax_bw is not None:
-            hidden_states = self.ln_1(hidden_states)
-            # hidden_states = custom_int_layernorm(hidden_states, self.ln_1.weight, self.ln_1.bias, self.softmax_bw)
+            # hidden_states = self.ln_1(hidden_states)
+            hidden_states = custom_int_layernorm(hidden_states, self.ln_1.weight, self.ln_1.bias, self.softmax_bw)
         else:
             hidden_states = self.ln_1(hidden_states)
         # hidden_states = self.ln_1(hidden_states)
@@ -672,8 +672,8 @@ class GPT2Block(nn.Module):
                 print('before ln_cross_attn overflow', hidden_states.dtype)
             if self.do_layer_norm_before:
                 if self.softmax_bw is not None:
-                    hidden_states = self.ln_cross_attn(hidden_states)
-                    # hidden_states = custom_int_layernorm(hidden_states, self.ln_cross_attn.weight, self.ln_cross_attn.bias, self.softmax_bw)
+                    # hidden_states = self.ln_cross_attn(hidden_states)
+                    hidden_states = custom_int_layernorm(hidden_states, self.ln_cross_attn.weight, self.ln_cross_attn.bias, self.softmax_bw)
                 else:
                     hidden_states = self.ln_cross_attn(hidden_states)
             # hidden_states = self.ln_cross_attn(hidden_states)
@@ -696,8 +696,8 @@ class GPT2Block(nn.Module):
         if torch.isnan(hidden_states).any():
             print('before ln2 overflow', hidden_states.dtype)
         if self.softmax_bw is not None:
-            hidden_states = self.ln_2(hidden_states)
-            # hidden_states = custom_int_layernorm(hidden_states, self.ln_2.weight, self.ln_2.bias, self.softmax_bw)
+            # hidden_states = self.ln_2(hidden_states)
+            hidden_states = custom_int_layernorm(hidden_states, self.ln_2.weight, self.ln_2.bias, self.softmax_bw)
         else:
             hidden_states = self.ln_2(hidden_states)
         # hidden_states = self.ln_2(hidden_states)
