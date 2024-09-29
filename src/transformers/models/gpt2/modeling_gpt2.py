@@ -637,11 +637,16 @@ class GPT2Block(nn.Module):
     ) -> Union[Tuple[torch.Tensor], Optional[Tuple[torch.Tensor, Tuple[torch.FloatTensor, ...]]]]:
         residual = hidden_states
         
+        if torch.isnan(hidden_states).any():
+            print('before ln1 overflow', hidden_states.dtype)
         if self.softmax_bw is not None:
-            hidden_states = custom_int_layernorm(hidden_states, self.ln_1.weight, self.ln_1.bias, self.softmax_bw)
+            hidden_states = self.ln_1(hidden_states)
+            # hidden_states = custom_int_layernorm(hidden_states, self.ln_1.weight, self.ln_1.bias, self.softmax_bw)
         else:
             hidden_states = self.ln_1(hidden_states)
         # hidden_states = self.ln_1(hidden_states)
+        if torch.isnan(hidden_states).any():
+            print('after ln1 overflow', hidden_states.dtype)
         attn_outputs = self.attn(
             hidden_states,
             layer_past=layer_past,
@@ -663,12 +668,17 @@ class GPT2Block(nn.Module):
                     "cross-attention layers by setting `config.add_cross_attention=True`"
                 )
             residual = hidden_states
+            if torch.isnan(hidden_states).any():
+                print('before ln_cross_attn overflow', hidden_states.dtype)
             if self.do_layer_norm_before:
                 if self.softmax_bw is not None:
-                    hidden_states = custom_int_layernorm(hidden_states, self.ln_cross_attn.weight, self.ln_cross_attn.bias, self.softmax_bw)
+                    hidden_states = self.ln_cross_attn(hidden_states)
+                    # hidden_states = custom_int_layernorm(hidden_states, self.ln_cross_attn.weight, self.ln_cross_attn.bias, self.softmax_bw)
                 else:
                     hidden_states = self.ln_cross_attn(hidden_states)
             # hidden_states = self.ln_cross_attn(hidden_states)
+            if torch.isnan(hidden_states).any():
+                print('after ln_cross_attn overflow', hidden_states.dtype)
             cross_attn_outputs = self.crossattention(
                 hidden_states,
                 attention_mask=attention_mask,
@@ -683,11 +693,16 @@ class GPT2Block(nn.Module):
             outputs = outputs + cross_attn_outputs[2:]  # add cross attentions if we output attention weights
 
         residual = hidden_states
+        if torch.isnan(hidden_states).any():
+            print('before ln2 overflow', hidden_states.dtype)
         if self.softmax_bw is not None:
-            hidden_states = custom_int_layernorm(hidden_states, self.ln_2.weight, self.ln_2.bias, self.softmax_bw)
+            hidden_states = self.ln_2(hidden_states)
+            # hidden_states = custom_int_layernorm(hidden_states, self.ln_2.weight, self.ln_2.bias, self.softmax_bw)
         else:
             hidden_states = self.ln_2(hidden_states)
         # hidden_states = self.ln_2(hidden_states)
+        if torch.isnan(hidden_states).any():
+            print('after ln2 overflow', hidden_states.dtype)
         feed_forward_hidden_states = self.mlp(hidden_states)
         # residual connection
         hidden_states = residual + feed_forward_hidden_states
