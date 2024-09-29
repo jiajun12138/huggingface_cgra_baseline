@@ -76,9 +76,9 @@ def custom_int_exp(x, bw, term):
     #print(fp_x)
     input = x*torch.tensor(1.442695)
     
-    count["1"] += 1
-    if count["1"] <= 5:
-        print("input:", input, input.max(), input.min())
+    # count["1"] += 1
+    # if count["1"] <= 5:
+    #     print("input:", input, input.max(), input.min())
 
     # _, scale, zero = asym_quantize(input, bw)
     # if scale.max() in [float('inf'), float('-inf')]:
@@ -179,9 +179,9 @@ def custom_int_layernorm(x, w, b, bw):
     # scale = x.max() * 0.9
     scale = 1.0
     x_1 = x / scale
-    count["1"] += 1
-    if count["1"] <= 8:
-        print("statistics:", x.max() * 0.9)
+    # count["1"] += 1
+    # if count["1"] <= 8:
+    print("statistics:", x.max() * 0.9)
 
     int_s = 2 ** frac_bits[bw]
     x_1 = (x * int_s).to(torch.int64)
@@ -204,8 +204,9 @@ def custom_int_layernorm(x, w, b, bw):
     else:
         bias = b
     invsqrt = 1.0 / (x_sum_x2 - (x_sum_x ** 2) + eps).sqrt()
+    print(invsqrt)
     # prrint(invsqrt, 1.0 / (x_1.var()))
     ans = w * (x_1 - x_sum_x) * invsqrt + b
-    if torch.isnan(ans).any():
+    if torch.isnan(ans.to(x.dtype)).any():
         print('ln overflow', ans.dtype)
     return ans.to(x.dtype)
