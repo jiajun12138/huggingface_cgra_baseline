@@ -1,6 +1,6 @@
 import torch, math
 
-frac_bits = {8:3, 16: 7, 32: 8}
+frac_bits = {8:3, 16: 9, 32: 9}
 
 def get_minq_maxq(bits: int, sym: bool):
     if sym:
@@ -178,7 +178,7 @@ def custom_int_layernorm(x, w, b, bw):
     # x_sum_x = torch.tensor(0)
     # x_sum_x2 = torch.tensor(0)
     # scale = x.max() * 0.9
-    scale = x.max() * 0.9
+    scale = x.max() * 0.95
     x_1 = x / scale
     # count["1"] += 1
     # if count["1"] <= 8:
