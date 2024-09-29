@@ -187,14 +187,22 @@ class GPT2Attention(nn.Module):
     def _attn(self, query, key, value, attention_mask=None, head_mask=None):
         attn_weights = torch.matmul(query, key.transpose(-1, -2))
 
+        if torch.isnan(attn_weights).any():
+            print('init overflow', attn_weights.dtype)
+
         if self.scale_attn_weights:
             attn_weights = attn_weights / torch.full(
                 [], value.size(-1) ** 0.5, dtype=attn_weights.dtype, device=attn_weights.device
             )
+        if torch.isnan(attn_weights).any():
+            print('before bias overflow', attn_weights.dtype)
 
         # Layer-wise attention scaling
         if self.scale_attn_by_inverse_layer_idx:
             attn_weights = attn_weights / float(self.layer_idx + 1)
+        
+        if torch.isnan(attn_weights).any():
+            print('after bias overflow', attn_weights.dtype)
 
         if not self.is_cross_attention:
             # if only "normal" attention layer implements causal mask
@@ -206,9 +214,15 @@ class GPT2Attention(nn.Module):
             mask_value = torch.full([], mask_value, dtype=attn_weights.dtype, device=attn_weights.device)
             attn_weights = torch.where(causal_mask, attn_weights.to(attn_weights.dtype), mask_value)
 
+        if torch.isnan(attn_weights).any():
+            print('before mask overflow', attn_weights.dtype)
+
         if attention_mask is not None:
             # Apply the attention mask
             attn_weights = attn_weights + attention_mask
+
+        if torch.isnan(attn_weights).any():
+            print('after mask overflow', attn_weights.dtype)
 
         if attn_weights.dtype == torch.float16:
             if self.custom_softmax:

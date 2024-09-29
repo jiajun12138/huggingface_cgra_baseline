@@ -151,7 +151,7 @@ def custom_int_gelu(x, bw, term):
     return frac_mult(q, tanh_plus1, bw) * scale * 0.5
 
 def custom_int_softmax(x, bw, term):
-    print("softmax input", torch.isinf(x).any(), torch.isnan(x).any())
+    print("softmax input", (torch.abs(x) >= 20000).any(), torch.isnan(x).any())
     new_x = x.to(torch.float64)
     # x_clamp = torch.clamp(new_x, min = - 20)
     x_max = torch.max(new_x, -1, keepdim=True)[0]
@@ -178,7 +178,7 @@ def custom_int_layernorm(x, w, b, bw):
     # x_sum_x = torch.tensor(0)
     # x_sum_x2 = torch.tensor(0)
     # scale = x.max() * 0.9
-    scale = 40.0
+    scale = x.max() * 0.5
     x_1 = x / scale
     # count["1"] += 1
     # if count["1"] <= 8:
@@ -213,6 +213,6 @@ def custom_int_layernorm(x, w, b, bw):
     ans = w * (x_1 - x_sum_x) * invsqrt + b
     if torch.isnan(ans.to(x.dtype)).any():
         print('ln overflow', ans.dtype)
-    if torch.isinf(ans).any():
+    if (torch.abs(ans) >= 20000).any():
         print('ln overflow111', ans.dtype, invsqrt)
     return ans.to(x.dtype)
