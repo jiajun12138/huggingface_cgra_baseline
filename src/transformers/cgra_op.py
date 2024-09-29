@@ -205,9 +205,11 @@ def custom_int_layernorm(x, w, b, bw):
     else:
         bias = b
     invsqrt = 1.0 / (x_sum_x2 - (x_sum_x ** 2) + eps).sqrt()
-    print(invsqrt)
+    # print(invsqrt)
     # prrint(invsqrt, 1.0 / (x_1.var()))
     ans = w * (x_1 - x_sum_x) * invsqrt + b
     if torch.isnan(ans.to(x.dtype)).any():
         print('ln overflow', ans.dtype)
+    if torch.isinf(ans).any():
+        print('ln overflow111', ans.dtype, invsqrt)
     return ans.to(x.dtype)
