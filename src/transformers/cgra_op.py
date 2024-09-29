@@ -206,7 +206,7 @@ def custom_int_layernorm(x, w, b, bw):
         bias = b
     invsqrt = 1.0 / (x_sum_x2 - (x_sum_x ** 2) + eps).sqrt()
     print("statistics:")
-    print(x.max(dim=-1))
+    print(x.max(), x.max(dim=-1))
     print(invsqrt.max(), invsqrt.min(), torch.isnan(invsqrt).any(), torch.isinf(invsqrt).any())
     print(x_sum_x2.max(), x_sum_x2.min(), torch.isnan(x_sum_x2).any(), torch.isinf(x_sum_x2).any())
     print(x_sum_x.max(), x_sum_x.min(), torch.isnan(x_sum_x).any(), torch.isinf(x_sum_x).any())
@@ -215,5 +215,5 @@ def custom_int_layernorm(x, w, b, bw):
     if torch.isnan(ans.to(x.dtype)).any():
         print('ln overflow', ans.dtype)
     if (torch.abs(ans) >= 30000).any():
-        print('ln overflow111', ans.dtype, ans.max(dim=-1), w, b)
+        print('ln overflow111', ans.dtype, ans.max(dim=-1), ans.max(), w, b)
     return ans.to(x.dtype)
