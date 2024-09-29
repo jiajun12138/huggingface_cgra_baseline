@@ -185,7 +185,7 @@ def custom_int_layernorm(x, w, b, bw):
     # print("statistics:", x.max() * 0.9)
 
     int_s = 2 ** frac_bits[bw]
-    x_1 = (x * int_s).to(torch.int64)
+    x_1 = (x_1 * int_s).to(torch.int64)
 
     N = x_1.shape[-1]
     # print(N)
