@@ -151,7 +151,7 @@ def custom_int_gelu(x, bw, term):
     return frac_mult(q, tanh_plus1, bw) * scale * 0.5
 
 def custom_int_softmax(x, bw, term):
-    # print("softmax input", x, torch.isnan(x).any())
+    print("softmax input", torch.isinf(x).any(), torch.isnan(x).any())
     new_x = x.to(torch.float64)
     # x_clamp = torch.clamp(new_x, min = - 20)
     x_max = torch.max(new_x, -1, keepdim=True)[0]
@@ -178,11 +178,11 @@ def custom_int_layernorm(x, w, b, bw):
     # x_sum_x = torch.tensor(0)
     # x_sum_x2 = torch.tensor(0)
     # scale = x.max() * 0.9
-    scale = x.max() * 0.5
+    scale = 40.0
     x_1 = x / scale
     # count["1"] += 1
     # if count["1"] <= 8:
-    print("statistics:", x.max() * 0.9)
+    # print("statistics:", x.max() * 0.9)
 
     int_s = 2 ** frac_bits[bw]
     x_1 = (x * int_s).to(torch.int64)
@@ -205,7 +205,10 @@ def custom_int_layernorm(x, w, b, bw):
     else:
         bias = b
     invsqrt = 1.0 / (x_sum_x2 - (x_sum_x ** 2) + eps).sqrt()
-    # print(invsqrt)
+    print("statistics:")
+    print(invsqrt.max(), invsqrt.min(), torch.isnan(invsqrt).any(), torch.isinf(invsqrt).any())
+    print(x_sum_x2.max(), x_sum_x2.min(), torch.isnan(x_sum_x2).any(), torch.isinf(x_sum_x2).any())
+    print(x_sum_x.max(), x_sum_x.min(), torch.isnan(x_sum_x).any(), torch.isinf(x_sum_x).any())
     # prrint(invsqrt, 1.0 / (x_1.var()))
     ans = w * (x_1 - x_sum_x) * invsqrt + b
     if torch.isnan(ans.to(x.dtype)).any():
