@@ -609,8 +609,8 @@ class GPT2MLP(nn.Module):
         if torch.isnan(hidden_states).any():
             print('before gelu overflow', hidden_states.dtype)
         # hidden_states = torch.nn.functional.gelu(hidden_states)
-        hidden_states = custom_int_gelu(hidden_states, 16, 3).to(hidden_states)
-        # hidden_states = self.act(hidden_states)
+        # hidden_states = custom_int_gelu(hidden_states, 16, 3).to(hidden_states)
+        hidden_states = self.act(hidden_states)
         if torch.isnan(hidden_states).any():
             print('after gelu overflow', hidden_states.dtype)
         hidden_states = self.c_proj(hidden_states)
