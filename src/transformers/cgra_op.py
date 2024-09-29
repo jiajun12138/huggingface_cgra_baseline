@@ -75,7 +75,7 @@ count = {"1":0}
 def custom_int_exp(x, bw, term):
     #print(fp_x)
     input = x*torch.tensor(1.442695)
-    
+    print(input)
     # count["1"] += 1
     # if count["1"] <= 5:
     #     print("input:", input, input.max(), input.min())
