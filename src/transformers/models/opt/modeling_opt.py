@@ -204,14 +204,14 @@ class OPTAttention(nn.Module):
             if self.custom_softmax:
                 if self.softmax_int:
                     attn_weights = custom_int_softmax(attn_weights, self.softmax_bw, self.softmax_term).to(attn_weights)
-                    #print(torch.isnan(attn_weights).any())
+                    print(torch.isnan(attn_weights).any())
             else:
                 attn_weights = nn.functional.softmax(attn_weights, dim=-1, dtype=torch.float32).to(torch.float16)
         else:
             if self.custom_softmax:
                 if self.softmax_int:
                     attn_weights = custom_int_softmax(attn_weights, self.softmax_bw, self.softmax_term).to(attn_weights)
-                    #print(torch.isnan(attn_weights).any())
+                    print(torch.isnan(attn_weights).any())
             else:
                 attn_weights = nn.functional.softmax(attn_weights, dim=-1)
 
