@@ -75,7 +75,6 @@ count = {"1":0}
 def custom_int_exp(x, bw, term):
     #print(fp_x)
     input = x*torch.tensor(1.442695)
-    print(input)
     # count["1"] += 1
     # if count["1"] <= 5:
     #     print("input:", input, input.max(), input.min())
@@ -152,6 +151,7 @@ def custom_int_gelu(x, bw, term):
     return frac_mult(q, tanh_plus1, bw) * scale * 0.5
 
 def custom_int_softmax(x, bw, term):
+    print(x)
     new_x = x.to(torch.float64)
     # x_clamp = torch.clamp(new_x, min = - 20, max = 30)
     x_max = torch.max(new_x, -1, keepdim=True)[0]
