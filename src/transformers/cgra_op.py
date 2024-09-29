@@ -123,6 +123,12 @@ def custom_int_tanh(x, bw, term):
     return tanh_x
 
 def custom_int_gelu(x, bw, term):
+
+    # find the position in x that x[i] == inf / -inf
+    # pos = torch.argwhere(torch.isinf(x))
+    count["1"] += 1
+    if count["1"] <= 5:
+        print("x", x.max(), x.min(), x)
     q, scale, zero = asym_quantize(x, bw)
     
     scale1 = scale ** 2 * 0.044715 * (math.sqrt(2 / math.pi) ) 
@@ -188,9 +194,9 @@ def custom_int_layernorm(x, w, b, bw):
         bias = 0.0
     else:
         bias = b
-    count["1"] += 1
-    if count["1"] <= 5:
-        print("statistics:", scale, x_sum_x, x_1.mean(dim=-1, keepdim=True, dtype=x_sum_x.dtype))
+    # count["1"] += 1
+    # if count["1"] <= 5:
+    #     print("statistics:", scale, x_sum_x, x_1.mean(dim=-1, keepdim=True, dtype=x_sum_x.dtype))
     invsqrt = 1.0 / (x_sum_x2 - (x_sum_x ** 2) + eps).sqrt()
     # prrint(invsqrt, 1.0 / (x_1.var()))
     ans = w * (x_1 - x_sum_x) * invsqrt + b
