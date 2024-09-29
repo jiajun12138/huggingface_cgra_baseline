@@ -211,6 +211,11 @@ def custom_int_layernorm(x, w, b, bw):
     print(x_sum_x2.max(), x_sum_x2.min(), torch.isnan(x_sum_x2).any(), torch.isinf(x_sum_x2).any())
     print(x_sum_x.max(), x_sum_x.min(), torch.isnan(x_sum_x).any(), torch.isinf(x_sum_x).any())
     # prrint(invsqrt, 1.0 / (x_1.var()))
+    print("weight:")
+    print(w.max(), w.min(), torch.isnan(w).any(), torch.isinf(w).any())
+    print("bias:")
+    print(b.max(), b.min(), torch.isnan(b).any(), torch.isinf(b).any())
+    print("shape", w.shape, x_1.shape, x_sum_x.shape, b.shape, invsqrt.shape)
     ans = w * (x_1 - x_sum_x) * invsqrt + b
     if torch.isnan(ans.to(x.dtype)).any():
         print('ln overflow', ans.dtype)
