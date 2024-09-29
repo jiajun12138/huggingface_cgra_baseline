@@ -164,7 +164,7 @@ def custom_int_softmax(x, bw, term):
     x_sum = x_exp.sum(dim=-1, keepdim=True)
     if torch.isnan(x_sum).any():
         print('x_sum overflow', x_sum.dtype)
-    print("sum should be", x_sum)
+    print("sum should be", x_exp / x_sum)
 
     return x_exp.to(torch.float64) / x_sum.to(torch.float64)
     # return frac_div(x_exp, x_sum, bw)
