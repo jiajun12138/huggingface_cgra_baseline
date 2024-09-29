@@ -178,7 +178,7 @@ def custom_int_layernorm(x, w, b, bw):
     # x_sum_x = torch.tensor(0)
     # x_sum_x2 = torch.tensor(0)
     # scale = x.max() * 0.9
-    scale = x.max() * 0.5
+    scale = x.max() * 0.9
     x_1 = x / scale
     # count["1"] += 1
     # if count["1"] <= 8:
@@ -206,7 +206,7 @@ def custom_int_layernorm(x, w, b, bw):
         bias = b
     invsqrt = 1.0 / (x_sum_x2 - (x_sum_x ** 2) + eps).sqrt()
     print("statistics:")
-    print(x.max(), x.max(dim=-1), x.min(), x.min(dim=-1))
+    print(x_1.max(), x_1.max(dim=-1), x_1.min(), x_1.min(dim=-1))
     print(invsqrt.max(), invsqrt.min(), torch.isnan(invsqrt).any(), torch.isinf(invsqrt).any())
     print(x_sum_x2.max(), x_sum_x2.min(), torch.isnan(x_sum_x2).any(), torch.isinf(x_sum_x2).any())
     print(x_sum_x.max(), x_sum_x.min(), torch.isnan(x_sum_x).any(), torch.isinf(x_sum_x).any())
