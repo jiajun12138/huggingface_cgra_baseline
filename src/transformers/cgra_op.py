@@ -70,10 +70,15 @@ def frac_exp2(x, bw, term):
 
     return result, scale3
 
+count = {"1":0}
+
 def custom_int_exp(x, bw, term):
     #print(fp_x)
     input = x*torch.tensor(1.442695)
-    # print("input:", input, input.max(), input.min())
+    
+    count["1"] += 1
+    if count["1"] <= 5:
+        print("input:", input, input.max(), input.min())
 
     # _, scale, zero = asym_quantize(input, bw)
     # if scale.max() in [float('inf'), float('-inf')]:
@@ -127,9 +132,9 @@ def custom_int_gelu(x, bw, term):
 
     # find the position in x that x[i] == inf / -inf
     # pos = torch.argwhere(torch.isinf(x))
-    count["1"] += 1
-    if count["1"] <= 5:
-        print("x", x.max(), x.min(), x)
+    # count["1"] += 1
+    # if count["1"] <= 5:
+    #     print("x", x.max(), x.min(), x)
     q, scale, zero = asym_quantize(x, bw)
     
     scale1 = scale ** 2 * 0.044715 * (math.sqrt(2 / math.pi) ) 
@@ -164,8 +169,6 @@ def custom_int_softmax(x, bw, term):
     return x_exp.to(torch.float64) / x_sum.to(torch.float64)
     # return frac_div(x_exp, x_sum, bw)
     # return x_exp / x_sum
-
-count = {"1":0}
 
 def custom_int_layernorm(x, w, b, bw):
     if torch.isnan(x).any():
