@@ -88,12 +88,9 @@ def custom_int_exp(x, bw, term):
     #print(frac_part)
     #print(int_part)
     max_int_scale = 2 ** int(input.max() * 0.9)
-    #print(max_int_scale)
+    print(max_int_scale)
     q, scale = frac_exp2(frac_part, bw, term)
-    count["1"] += 1
-    if count["1"] <= 5:
-        print(int_part, max_int_scale)
-    q = q * torch.pow(2, int_part - int(input.max() * 0.9)) 
+    q = q * torch.pow(2, int_part) / max_int_scale
     return q, scale * max_int_scale
     
 def frac_add(x, y, bw):
