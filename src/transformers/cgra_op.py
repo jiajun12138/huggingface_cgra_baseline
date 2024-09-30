@@ -103,8 +103,8 @@ def frac_add(x, y, bw):
     tmp_y=(y*(2**(scale-1))).to(torch.int64)
     #print('y: ', y)
     ans = tmp_x + tmp_y
-    if(ans >=2 **(bw-1)).any():
-      print('addition overflow')
+    # if(ans >=2 **(bw-1)).any():
+    #   print('addition overflow')
     # ans[ans >= 2 ** (bw - 1)] = (2 ** (bw - 1)) - 1
     result = ans.to(torch.int64)
     return result/(2**(scale-1))
@@ -148,7 +148,7 @@ def custom_int_gelu(x, bw, term):
     indices2 = math.sqrt(2.0 / math.pi) * x * (1.0 + 0.044715 * x ** 2) < -5
     x[indices1] = 0
     x[indices2] = 0
-    scale = x.abs().max() * 0.95
+    scale = x.abs().max()
     q = x / scale
     
     scale1 = scale ** 2 * 0.044715
