@@ -168,7 +168,7 @@ def custom_int_gelu(x, bw, term):
         print('gelu overflow', ans.dtype)
     if (torch.abs(ans) >= 30000).any():
         print('gelu overflow111', ans.dtype, ans.max(dim=-1), ans.max(), ans.min())
-    return
+    return ans.to(x.dtype)
 
 def custom_int_softmax(x, bw, term):
     # print("softmax input", (torch.abs(x) >= 20000).any(), torch.isnan(x).any())
