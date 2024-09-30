@@ -123,7 +123,7 @@ def frac_div(x, y, bw):
 import math
 
 def custom_int_tanh(x, bw, term):
-    print(x.max(), x.min())
+    # print(x.max(), x.min())
     # x[indices1] = 0
     # x[indices2] = 0
     exp_2x, scale = custom_int_exp(x * (-2.0), bw, term)
