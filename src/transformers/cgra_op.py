@@ -144,7 +144,8 @@ def custom_int_gelu(x, bw, term):
     if torch.isnan(x).any() or (torch.abs(x) >= 30000).any() :
         print('before gelu overflow', x.dtype, x.max(dim=-1), x.max(), x.min())
     save_x = torch.clone(x)
-    indices1, indices2 = x > 5, x < -5
+    indices1 = math.sqrt(2.0 / math.pi) * x * (1.0 + 0.044715 * x ** 2) > 5
+    indices2 = math.sqrt(2.0 / math.pi) * x * (1.0 + 0.044715 * x ** 2) < -5
     x[indices1] = 0
     x[indices2] = 0
     scale = x.abs().max() * 0.95
