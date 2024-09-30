@@ -177,7 +177,7 @@ def custom_int_softmax(x, bw, term):
     x_max = torch.max(new_x, -1, keepdim=True)[0]
     x_norm = new_x - x_max
     # print("norm input", x_norm, torch.isnan(x_norm).any())
-    print("softmax input", (torch.abs(x_norm) >= 20000).any(), torch.isnan(x_norm).any())
+    # print("softmax input", (torch.abs(x_norm) >= 20000).any(), torch.isnan(x_norm).any())
     x_exp, s = custom_int_exp(x_norm, bw, term)
     if torch.isnan(x_exp).any():
         print('x_exp overflow', x_exp.dtype)
