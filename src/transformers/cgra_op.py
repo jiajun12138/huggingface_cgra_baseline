@@ -82,11 +82,11 @@ def custom_int_exp(x, bw, term):
     # _, scale, zero = asym_quantize(input, bw)
     # if scale.max() in [float('inf'), float('-inf')]:
         # print('scale overflow', scale, scale.max(), x.max(), x.min())
-
+    input[input > 15] = 15
     int_part = torch.floor(input)
     frac_part = input - int_part
     #print(frac_part)
-    print(int_part)
+    # print(int_part)
     max_int_scale = 2 ** int(input.max() * 0.9)
     print(input.max(), max_int_scale)
     q, scale = frac_exp2(frac_part, bw, term)
@@ -141,13 +141,13 @@ def custom_int_gelu(x, bw, term):
     scale1 = scale ** 2 * 0.044715
     q1 = 1.0 / scale1
     scale2 = scale1 * scale * (math.sqrt(2 / math.pi) ) 
-    print(1)
+    # print(1)
     x_2 = frac_mult(q, q, bw)
-    print(2)
+    # print(2)
     x_2_tmp = frac_add(x_2, q1, bw)
-    print(3)
+    # print(3)
     x_3 = frac_mult(q, x_2_tmp, bw)
-    print(4)
+    # print(4)
 
     # print(x_3 * scale1)
 
