@@ -1,6 +1,6 @@
 import torch, math
 
-frac_bits = {8:3, 16: 9, 32: 9}
+frac_bits = {8:3, 16: 10, 32: 9}
 
 def get_minq_maxq(bits: int, sym: bool):
     if sym:
@@ -103,9 +103,9 @@ def frac_add(x, y, bw):
     tmp_y=(y*(2**(scale-1))).to(torch.int64)
     #print('y: ', y)
     ans = tmp_x + tmp_y
-    # if(ans >=2 **(bw-1)).any():
-    #   print('addition overflow')
-    ans[ans >= 2 ** (bw - 1)] = (2 ** (bw - 1)) - 1
+    if(ans >=2 **(bw-1)).any():
+      print('addition overflow')
+    # ans[ans >= 2 ** (bw - 1)] = (2 ** (bw - 1)) - 1
     result = ans.to(torch.int64)
     return result/(2**(scale-1))
 
@@ -123,7 +123,7 @@ def frac_div(x, y, bw):
 import math
 
 def custom_int_tanh(x, bw, term):
-    indices1, indices2 = x > 5, x < -5
+    indices1, indices2 = x > 7, x < -7
     # print(x)
     x[indices1] = 0
     x[indices2] = 0
@@ -144,7 +144,7 @@ def custom_int_gelu(x, bw, term):
     # q, scale, zero = asym_quantize(x, bw)
     if torch.isnan(x).any() or (torch.abs(x) >= 30000).any() :
         print('before gelu overflow', x.dtype, x.max(dim=-1), x.max(), x.min())
-    scale = x.abs().max() * 0.9
+    scale = x.abs().max() * 0.95
     q = x / scale
     
     scale1 = scale ** 2 * 0.044715
