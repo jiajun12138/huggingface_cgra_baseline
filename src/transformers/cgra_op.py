@@ -166,7 +166,7 @@ def custom_int_gelu(x, bw, term):
     tanh_plus1 = frac_add(torch.tensor(1.0), tanh, bw)
 
     ans = frac_mult(q, tanh_plus1, bw) * scale * 0.5
-    ans[indices1] = save_x[indices1]
+    ans[indices1] = save_x[indices1].to(ans.dtype)
     ans[indices2] = 0
 
     if torch.isnan(ans.to(x.dtype)).any():
