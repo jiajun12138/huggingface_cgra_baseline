@@ -143,9 +143,10 @@ def custom_int_gelu(x, bw, term):
     # q, scale, zero = asym_quantize(x, bw)
     if torch.isnan(x).any() or (torch.abs(x) >= 30000).any() :
         print('before gelu overflow', x.dtype, x.max(dim=-1), x.max(), x.min())
+    save_x = torch.clone(x)
     indices1, indices2 = x > 5, x < -5
-    x[indices1] = 5
-    x[indices2] = -5
+    x[indices1] = 0
+    x[indices2] = 0
     scale = x.abs().max() * 0.95
     q = x / scale
     
@@ -165,6 +166,8 @@ def custom_int_gelu(x, bw, term):
     tanh_plus1 = frac_add(torch.tensor(1.0), tanh, bw)
 
     ans = frac_mult(q, tanh_plus1, bw) * scale * 0.5
+    ans[indices1] = save_x[indices1]
+    ans[indices2] = 0
 
     if torch.isnan(ans.to(x.dtype)).any():
         print('gelu overflow', ans.dtype)
