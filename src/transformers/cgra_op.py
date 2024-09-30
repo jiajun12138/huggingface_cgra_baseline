@@ -122,7 +122,7 @@ def frac_div(x, y, bw):
 import math
 
 def custom_int_tanh(x, bw, term):
-    exp_2x, scale = custom_int_exp(frac_mult(torch.tensor(-2.0), x, bw), bw, term)
+    exp_2x, scale = custom_int_exp(x, bw, term)
     q = 1.0 / scale
     tanh_x = frac_add(q, -exp_2x, bw) / frac_add(q, exp_2x, bw)
     return tanh_x
@@ -145,7 +145,7 @@ def custom_int_gelu(x, bw, term):
 
     # print(x_3 * scale1)
 
-    tanh = custom_int_tanh(x_3 * scale1, bw, term)
+    tanh = custom_int_tanh(x_3 * scale1 * (-2.0), bw, term)
     tanh_plus1 = frac_add(torch.tensor(1.0), tanh, bw)
 
     return frac_mult(q, tanh_plus1, bw) * scale * 0.5
@@ -178,7 +178,7 @@ def custom_int_layernorm(x, w, b, bw):
     # x_sum_x = torch.tensor(0)
     # x_sum_x2 = torch.tensor(0)
     # scale = x.max() * 0.9
-    scale = x.max() * 0.96
+    scale = x.max() * 0.9
     x_1 = x / scale
     # count["1"] += 1
     # if count["1"] <= 8:
