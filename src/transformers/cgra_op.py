@@ -1,6 +1,6 @@
 import torch, math
 
-frac_bits = {8:3, 16: 11, 32: 9}
+frac_bits = {8:3, 16: 9, 32: 9}
 
 def get_minq_maxq(bits: int, sym: bool):
     if sym:
@@ -42,9 +42,9 @@ def frac_mult(x, y, bw):
     tmp_y=(y*(2**(scale-1))).to(torch.int64)
     # print('y: ', y)
     ans = (tmp_x * tmp_y).to(torch.int64)
-    if(ans >= 2 **(2 * bw-1)).any():
-        print('multiplication overflow')
-    ans[ans >= 2 ** (2*bw - 1)] = (2 ** (2*bw - 1)) - 1
+    if(ans >= 2 ** ((2 * bw) - 2)).any():
+        print('multiplication overflow', 2 ** ((2 * bw) - 2),x, y, ans)
+    ans[ans >= 2 ** (2 * bw - 2)] = (2 ** (2 * bw - 2)) - 2
     result = (ans/(2**(scale-1))).to(torch.int64)
     return result/(2**(scale-1))
 
@@ -73,8 +73,8 @@ def frac_exp2(x, bw, term):
 count = {"1":0}
 
 def custom_int_exp(x, bw, term):
-    #print(fp_x)
-    input = x*torch.tensor(1.442695)
+    # print(x)
+    input = x * torch.tensor(1.442695)
     # count["1"] += 1
     # if count["1"] <= 5:
     #     print("input:", input, input.max(), input.min())
@@ -134,18 +134,24 @@ def custom_int_gelu(x, bw, term):
     # count["1"] += 1
     # if count["1"] <= 5:
     #     print("x", x.max(), x.min(), x)
-    q, scale, zero = asym_quantize(x, bw)
+    # q, scale, zero = asym_quantize(x, bw)
+    scale = x.abs().max() * 0.9
+    q = x / scale
     
-    scale1 = scale ** 2 * 0.044715 * (math.sqrt(2 / math.pi) ) 
+    scale1 = scale ** 2 * 0.044715
     q1 = 1.0 / scale1
-    
+    scale2 = scale1 * scale * (math.sqrt(2 / math.pi) ) 
+    print(1)
     x_2 = frac_mult(q, q, bw)
+    print(2)
     x_2_tmp = frac_add(x_2, q1, bw)
+    print(3)
     x_3 = frac_mult(q, x_2_tmp, bw)
+    print(4)
 
     # print(x_3 * scale1)
 
-    tanh = custom_int_tanh(x_3 * scale1 * (-2.0), bw, term)
+    tanh = custom_int_tanh(x_3 * scale2 * (-2.0), bw, term)
     tanh_plus1 = frac_add(torch.tensor(1.0), tanh, bw)
 
     return frac_mult(q, tanh_plus1, bw) * scale * 0.5
