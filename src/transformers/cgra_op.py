@@ -123,15 +123,14 @@ def frac_div(x, y, bw):
 import math
 
 def custom_int_tanh(x, bw, term):
-    indices1, indices2 = x > 7, x < -7
     # print(x)
-    x[indices1] = 0
-    x[indices2] = 0
+    # x[indices1] = 0
+    # x[indices2] = 0
     exp_2x, scale = custom_int_exp(x * (-2.0), bw, term)
     q = 1.0 / scale
     tanh_x = frac_add(q, -exp_2x, bw) / frac_add(q, exp_2x, bw)
-    tanh_x[indices1] = 1.0
-    tanh_x[indices2] = -1.0
+    # tanh_x[indices1] = 1.0
+    # tanh_x[indices2] = -1.0
     return tanh_x
 
 def custom_int_gelu(x, bw, term):
@@ -144,6 +143,9 @@ def custom_int_gelu(x, bw, term):
     # q, scale, zero = asym_quantize(x, bw)
     if torch.isnan(x).any() or (torch.abs(x) >= 30000).any() :
         print('before gelu overflow', x.dtype, x.max(dim=-1), x.max(), x.min())
+    indices1, indices2 = x > 5, x < -5
+    x[indices1] = 5
+    x[indices2] = -5
     scale = x.abs().max() * 0.95
     q = x / scale
     
