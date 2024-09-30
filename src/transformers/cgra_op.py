@@ -140,6 +140,8 @@ def custom_int_gelu(x, bw, term):
     # if count["1"] <= 5:
     #     print("x", x.max(), x.min(), x)
     # q, scale, zero = asym_quantize(x, bw)
+    if torch.isnan(x).any() or (torch.abs(x) >= 30000).any() :
+        print('before gelu overflow', x.dtype, x.max(dim=-1), x.max(), x.min())
     scale = x.abs().max() * 0.9
     q = x / scale
     
@@ -158,7 +160,13 @@ def custom_int_gelu(x, bw, term):
     tanh = custom_int_tanh(x_3 * scale2, bw, term)
     tanh_plus1 = frac_add(torch.tensor(1.0), tanh, bw)
 
-    return frac_mult(q, tanh_plus1, bw) * scale * 0.5
+    ans = frac_mult(q, tanh_plus1, bw) * scale * 0.5
+
+    if torch.isnan(ans.to(x.dtype)).any():
+        print('gelu overflow', ans.dtype)
+    if (torch.abs(ans) >= 30000).any():
+        print('gelu overflow111', ans.dtype, ans.max(dim=-1), ans.max(), ans.min())
+    return
 
 def custom_int_softmax(x, bw, term):
     # print("softmax input", (torch.abs(x) >= 20000).any(), torch.isnan(x).any())
