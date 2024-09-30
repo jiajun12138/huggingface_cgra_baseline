@@ -82,13 +82,12 @@ def custom_int_exp(x, bw, term):
     # _, scale, zero = asym_quantize(input, bw)
     # if scale.max() in [float('inf'), float('-inf')]:
         # print('scale overflow', scale, scale.max(), x.max(), x.min())
-    input[input > 15] = 15
     int_part = torch.floor(input)
     frac_part = input - int_part
     #print(frac_part)
     # print(int_part)
     max_int_scale = 2 ** int(input.max() * 0.9)
-    print(input.max(), max_int_scale)
+    # print(input.max(), max_int_scale)
     q, scale = frac_exp2(frac_part, bw, term)
     q = q * torch.pow(2, int_part) / max_int_scale
     return q, scale * max_int_scale
@@ -122,9 +121,15 @@ def frac_div(x, y, bw):
 import math
 
 def custom_int_tanh(x, bw, term):
-    exp_2x, scale = custom_int_exp(x, bw, term)
+    indices1, indices2 = x > 10, x < -10
+    # print(x)
+    x[indices1] = 0
+    x[indices2] = 0
+    exp_2x, scale = custom_int_exp(x * (-2.0), bw, term)
     q = 1.0 / scale
     tanh_x = frac_add(q, -exp_2x, bw) / frac_add(q, exp_2x, bw)
+    tanh_x[indices1] = 1.0
+    tanh_x[indices2] = -1.0
     return tanh_x
 
 def custom_int_gelu(x, bw, term):
@@ -150,8 +155,7 @@ def custom_int_gelu(x, bw, term):
     # print(4)
 
     # print(x_3 * scale1)
-
-    tanh = custom_int_tanh(x_3 * scale2 * (-2.0), bw, term)
+    tanh = custom_int_tanh(x_3 * scale2, bw, term)
     tanh_plus1 = frac_add(torch.tensor(1.0), tanh, bw)
 
     return frac_mult(q, tanh_plus1, bw) * scale * 0.5
