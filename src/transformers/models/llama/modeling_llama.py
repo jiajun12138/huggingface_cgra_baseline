@@ -50,7 +50,7 @@ from ...utils import (
 )
 from .configuration_llama import LlamaConfig
 
-from ...cgra_op import custom_int_softmax, custom_int_gelu, custom_int_layernorm
+from ...cgra_op import custom_int_softmax, custom_int_gelu, custom_int_rmsnorm
 
 
 logger = logging.get_logger(__name__)
