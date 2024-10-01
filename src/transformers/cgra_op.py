@@ -249,3 +249,50 @@ def custom_int_layernorm(x, w, b, bw):
     if (torch.abs(ans) >= 30000).any():
         print('ln overflow111', ans.dtype, ans.max(dim=-1), ans.max(), ans.min(), w, b)
     return ans.to(x.dtype)
+
+def custom_int_rmsnorm(x, w, bw):
+    if torch.isnan(x).any():
+        print('before ln x overflow', x.dtype)
+    eps = 1e-5
+    # x_sum_x = torch.tensor(0)
+    # x_sum_x2 = torch.tensor(0)
+    # scale = x.max() * 0.9
+    scale = x.max() * 0.9
+    x_1 = x / scale
+    # count["1"] += 1
+    # if count["1"] <= 8:
+    # print("statistics:", x.max() * 0.9)
+
+    int_s = 2 ** frac_bits[bw]
+    x_1 = (x_1 * int_s).to(torch.int64)
+
+    N = x_1.shape[-1]
+    # print(N)
+    x_sum_x2 = (x_1 ** 2).sum(dim=-1, keepdim=True) / N 
+    if w is None:
+        weight = 1.0
+    else:
+        weight = w
+    if b is None:
+        bias = 0.0
+    else:
+        bias = b
+    invsqrt = 1.0 / (x_sum_x2).sqrt()
+    # print("statistics:")
+    # print(x_1.max(), x_1.max(dim=-1), x_1.min(), x_1.min(dim=-1))
+    # print(invsqrt.max(), invsqrt.min(), torch.isnan(invsqrt).any(), torch.isinf(invsqrt).any())
+    # print(x_sum_x2.max(), x_sum_x2.min(), torch.isnan(x_sum_x2).any(), torch.isinf(x_sum_x2).any())
+    # print(x_sum_x.max(), x_sum_x.min(), torch.isnan(x_sum_x).any(), torch.isinf(x_sum_x).any())
+    # # prrint(invsqrt, 1.0 / (x_1.var()))
+    # print("weight:")
+    # print(w.max(), w.min(), torch.isnan(w).any(), torch.isinf(w).any())
+    # print("bias:")
+    # print(b.max(), b.min(), torch.isnan(b).any(), torch.isinf(b).any())
+    # print("shape", w.shape, x_1.shape, x_sum_x.shape, b.shape, invsqrt.shape)
+    ans = w * (x_1) * invsqrt + b
+    if torch.isnan(ans.to(x.dtype)).any():
+        print('ln overflow', ans.dtype)
+    if (torch.abs(ans) >= 30000).any():
+        print('ln overflow111', ans.dtype, ans.max(dim=-1), ans.max(), ans.min(), w, b)
+    return ans.to(x.dtype)
+

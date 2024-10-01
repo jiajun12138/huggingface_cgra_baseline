@@ -166,6 +166,10 @@ class LlamaConfig(PretrainedConfig):
         attention_dropout=0.0,
         mlp_bias=False,
         head_dim=None,
+        custom_softmax=False,
+        softmax_int=False,
+        softmax_bw=None,
+        softmax_term=None,
         **kwargs,
     ):
         self.vocab_size = vocab_size
@@ -190,6 +194,10 @@ class LlamaConfig(PretrainedConfig):
         self.attention_bias = attention_bias
         self.attention_dropout = attention_dropout
         self.mlp_bias = mlp_bias
+        self.softmax_int=softmax_int
+        self.softmax_bw=softmax_bw
+        self.softmax_term=softmax_term
+        self.custom_softmax = custom_softmax
         self.head_dim = head_dim if head_dim is not None else self.hidden_size // self.num_attention_heads
         # Validate the correctness of rotary position embeddings parameters
         # BC: if there is a 'type' field, move it to 'rope_type'.
