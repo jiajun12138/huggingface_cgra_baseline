@@ -55,7 +55,7 @@ from ...utils import (
     replace_return_docstrings,
 )
 from .configuration_bert import BertConfig
-from .cgra_op import custom_int_softmax
+from .cgra_op import custom_int_softmax, custom_int_gelu, custom_int_layernorm
 print('running cgra bert')
 
 logger = logging.get_logger(__name__)
@@ -333,8 +333,8 @@ class BertSelfAttention(nn.Module):
             attention_scores = attention_scores + attention_mask
 
         # Normalize the attention scores to probabilities.
-        #attention_probs = nn.functional.softmax(attention_scores, dim=-1)
-        attention_probs = custom_int_softmax(attention_scores, 16, 5)
+        attention_probs = nn.functional.softmax(attention_scores, dim=-1)
+        # attention_probs = custom_int_softmax(attention_scores, 16, 5)
 
         # This is actually dropping out entire tokens to attend to, which might
         # seem a bit unusual, but is taken from the original Transformer paper.
