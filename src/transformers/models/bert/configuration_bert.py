@@ -95,7 +95,7 @@ class BertConfig(PretrainedConfig):
     ```"""
 
     model_type = "bert"
-
+    
     def __init__(
         self,
         vocab_size=30522,
