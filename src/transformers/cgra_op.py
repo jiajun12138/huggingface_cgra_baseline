@@ -273,10 +273,6 @@ def custom_int_rmsnorm(x, w, bw):
         weight = 1.0
     else:
         weight = w
-    if b is None:
-        bias = 0.0
-    else:
-        bias = b
     invsqrt = 1.0 / (x_sum_x2).sqrt()
     # print("statistics:")
     # print(x_1.max(), x_1.max(dim=-1), x_1.min(), x_1.min(dim=-1))
@@ -289,10 +285,10 @@ def custom_int_rmsnorm(x, w, bw):
     # print("bias:")
     # print(b.max(), b.min(), torch.isnan(b).any(), torch.isinf(b).any())
     # print("shape", w.shape, x_1.shape, x_sum_x.shape, b.shape, invsqrt.shape)
-    ans = w * (x_1) * invsqrt + b
+    ans = w * (x_1) * invsqrt
     if torch.isnan(ans.to(x.dtype)).any():
         print('ln overflow', ans.dtype)
     if (torch.abs(ans) >= 30000).any():
-        print('ln overflow111', ans.dtype, ans.max(dim=-1), ans.max(), ans.min(), w, b)
+        print('ln overflow111', ans.dtype, ans.max(dim=-1), ans.max(), ans.min(), w)
     return ans.to(x.dtype)
 
