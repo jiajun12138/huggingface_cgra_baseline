@@ -347,6 +347,10 @@ def custom_int_silu(x, bw, term):
     if exp_x[exp_x < 0.0].any():
         print('exp', exp_x.max(), exp_x.min(), exp_x.abs().min())
 
+    if scale.abs() > 2 ** 9:
+        exp_x = exp_x * (scale / 2 ** 9)
+        scale = torch.tensor(2 ** 9)
+
     exp_plus1 = frac_add(exp_x, torch.tensor(1.0) / scale, bw)
 
     if exp_plus1[exp_plus1 <= 1.0].any():
