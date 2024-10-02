@@ -259,7 +259,7 @@ def custom_int_rmsnorm(x, w, bw):
     # x_sum_x = torch.tensor(0)
     # x_sum_x2 = torch.tensor(0)
     # scale = x.max() * 0.9
-    scale = torch.amax(x, dim=-1, keepdim=True) * 0.9
+    scale = torch.amax(x, dim=-1, keepdim=True) * 0.95
     x_1 = x / scale
     # count["1"] += 1
     # if count["1"] <= 8:
@@ -298,4 +298,10 @@ def custom_int_rmsnorm(x, w, bw):
     if (torch.abs(ans) >= 30000).any():
         print('ln overflow111', ans.dtype, ans.max(dim=-1), ans.max(), ans.min(), w)
     return ans.to(x.dtype)
+
+def custom_int_silu(x, bw, term):
+    # x * sigmoid(x)
+    exp_x, scale = custom_int_exp(-x, bw, term)
+
+    return scale * frac_div(x, exp_x, bw)
 

@@ -50,7 +50,7 @@ from ...utils import (
 )
 from .configuration_llama import LlamaConfig
 
-from ...cgra_op import custom_int_softmax, custom_int_gelu, custom_int_rmsnorm
+from ...cgra_op import custom_int_softmax, custom_int_silu, custom_int_rmsnorm
 
 
 logger = logging.get_logger(__name__)
@@ -289,6 +289,9 @@ class LlamaMLP(nn.Module):
         self.gate_proj = nn.Linear(self.hidden_size, self.intermediate_size, bias=config.mlp_bias)
         self.up_proj = nn.Linear(self.hidden_size, self.intermediate_size, bias=config.mlp_bias)
         self.down_proj = nn.Linear(self.intermediate_size, self.hidden_size, bias=config.mlp_bias)
+        self.softmax_bw = config.softmax_bw
+        self.softmax_term = config.softmax_term
+        self.softmax_int = config.softmax_int
         self.act_fn = ACT2FN[config.hidden_act]
 
     def forward(self, x):
@@ -303,13 +306,23 @@ class LlamaMLP(nn.Module):
             )
             up_proj = torch.cat([F.linear(x, up_proj_slices[i]) for i in range(self.config.pretraining_tp)], dim=-1)
 
-            intermediate_states = (self.act_fn(gate_proj) * up_proj).split(slice, dim=2)
+            if self.softmax_bw is None:
+                intermediate_states = (self.act_fn(gate_proj) * up_proj).split(slice, dim=2)
+            else:
+                intermediate_states = (custom_int_silu(gate_proj, self.softmax_bw, self.softmax_term) * up_proj).split(slice, dim=2)
             down_proj = [
                 F.linear(intermediate_states[i], down_proj_slices[i]) for i in range(self.config.pretraining_tp)
             ]
             down_proj = sum(down_proj)
         else:
-            down_proj = self.down_proj(self.act_fn(self.gate_proj(x)) * self.up_proj(x))
+
+            if self.softmax_bw is None:
+                down_proj = self.down_proj(self.act_fn(self.gate_proj(x)) * self.up_proj(x))
+            else:
+                down_proj = self.down_proj(
+                    custom_int_silu(self.gate_proj(x), self.softmax_bw, self.softmax_term) * self.up_proj(x)
+                )
+
 
         return down_proj
 
