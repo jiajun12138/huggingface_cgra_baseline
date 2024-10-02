@@ -342,7 +342,6 @@ def custom_int_silu(x, bw, term):
     x[indices] = 0
     exp_x, scale = custom_int_exp(-x, bw, term)
     # print("exp", exp_x * scale, torch.exp(-x))
-    scale[indices] = 1.0
     exp_x[indices] = 0
 
     exp_plus1 = frac_add(exp_x, torch.tensor(1.0) / scale, bw)
