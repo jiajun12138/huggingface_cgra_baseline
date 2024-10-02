@@ -301,7 +301,8 @@ def custom_int_rmsnorm(x, w, bw):
 
 def custom_int_silu(x, bw, term):
     # x * sigmoid(x)
+    o_scale = x.max() * 0.9
     exp_x, scale = custom_int_exp(-x, bw, term)
 
-    return (frac_div(x, exp_x * scale, bw)).to(x.dtype)
+    return (frac_div(x / o_scale, exp_x, bw) * o_scale / scale).to(x.dtype)
 
