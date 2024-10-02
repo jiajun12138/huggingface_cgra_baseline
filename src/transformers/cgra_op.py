@@ -251,6 +251,8 @@ def custom_int_layernorm(x, w, b, bw):
     return ans.to(x.dtype)
 
 def custom_int_rmsnorm(x, w, bw):
+    if count["1"] <= 5:
+        print(x.max(), x.min())
     if torch.isnan(x).any():
         print('before ln x overflow', x.dtype)
     eps = 1e-5
