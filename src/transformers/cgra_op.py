@@ -344,15 +344,21 @@ def custom_int_silu(x, bw, term):
     exp_x, scale = custom_int_exp(-x, bw, term)
     # print("exp", exp_x * scale, torch.exp(-x))
     exp_x[indices1] = 0.0
+    if exp_x[exp_x < 0.0].any():
+        print('exp', exp_x.max(), exp_x.min(), exp_x.abs().min())
 
     exp_plus1 = frac_add(exp_x, torch.tensor(1.0) / scale, bw)
+
+    if exp_plus1[exp_plus1 <= 1.0].any():
+        print('exp_plus', exp_plus1.max(), exp_plus1.min(), exp_plus1.abs().min())
 
     ans = (frac_div(x / o_scale, exp_plus1, bw) * o_scale / scale).to(x.dtype)
 
     ans[indices2] = 0.0
 
     if torch.isnan(ans).any() or (torch.abs(ans) >= 30000).any() or torch.isinf(ans).any():
-        print('silu overflow', o_scale, scale, x.max(), x.min(), exp_plus1.max(), exp_plus1.min())
+        print('silu overflow', o_scale, scale, x.max(), x.abs().min(), x.min(), exp_plus1.max(), exp_plus1.min())
+        print('ans', ans.max(), ans.min(), ans.abs().min(), torch.isnan(ans).any())
     
     return ans
 
