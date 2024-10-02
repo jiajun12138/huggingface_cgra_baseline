@@ -306,7 +306,9 @@ def custom_int_silu(x, bw, term):
         o_scale = 1.0
     exp_x, scale = custom_int_exp(-x, bw, term)
 
-    ans = (frac_div(x / o_scale, exp_x, bw) * o_scale / scale).to(x.dtype)
+    exp_plus1 = frac_add(exp_x, torch.tensor(1.0) / scale, bw)
+
+    ans = (frac_div(x / o_scale, exp_plus1, bw) * o_scale / scale).to(x.dtype)
 
     if torch.isnan(ans).any() or (torch.abs(ans) >= 30000).any() or torch.isinf(ans).any():
         print('silu overflow', ans.dtype, o_scale, scale, x.max(), x.min(), exp_x.max(), exp_x.min())
