@@ -336,10 +336,14 @@ def custom_int_log(x, bw, term):
 
 def custom_int_silu(x, bw, term):
     # x * sigmoid(x)
-    o_scale = x.max()
+    o_scale = x.max() * 0.9
 
+    indices = x[x <= -30000]
+    x[indices] = 0
     exp_x, scale = custom_int_exp(-x, bw, term)
-    print("exp", exp_x * scale, torch.exp(-x))
+    # print("exp", exp_x * scale, torch.exp(-x))
+    scale[indices] = 1.0
+    exp_x[indices] = 0
 
     exp_plus1 = frac_add(exp_x, torch.tensor(1.0) / scale, bw)
 
