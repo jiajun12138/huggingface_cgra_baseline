@@ -303,5 +303,5 @@ def custom_int_silu(x, bw, term):
     # x * sigmoid(x)
     exp_x, scale = custom_int_exp(-x, bw, term)
 
-    return scale * frac_div(x, exp_x, bw)
+    return (scale * frac_div(x, exp_x, bw)).to(x.dtype)
 
