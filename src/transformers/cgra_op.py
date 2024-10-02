@@ -286,7 +286,12 @@ def custom_int_rmsnorm(x, w, bw):
     # print(w.max(), w.min(), torch.isnan(w).any(), torch.isinf(w).any())
     # print("bias:")
     # print(b.max(), b.min(), torch.isnan(b).any(), torch.isinf(b).any())
-    # print("shape", w.shape, x_1.shape, x_sum_x.shape, b.shape, invsqrt.shape)
+    if count["1"] <= 5:
+        print("shape", w.shape, x_1.shape, x_sum_x.shape, b.shape, invsqrt.shape)
+        print("invsqrt", invsqrt.max(), invsqrt.min())
+        print("x_sum_x2", x_sum_x2.max(), x_sum_x2.min())
+        
+
     ans = w * (x_1) * invsqrt
     if torch.isnan(ans.to(x.dtype)).any():
         print('ln overflow', invsqrt.max(), invsqrt.min(), x_sum_x2.max(), x_sum_x2.min())
