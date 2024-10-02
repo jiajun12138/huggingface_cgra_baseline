@@ -338,7 +338,7 @@ def custom_int_silu(x, bw, term):
     # x * sigmoid(x)
     o_scale = x.max() * 0.9
 
-    indices = x[x <= -30000]
+    indices = x <= -10000.0
     x[indices] = 0
     exp_x, scale = custom_int_exp(-x, bw, term)
     # print("exp", exp_x * scale, torch.exp(-x))
