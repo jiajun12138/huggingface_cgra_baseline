@@ -287,7 +287,7 @@ def custom_int_rmsnorm(x, w, bw):
     # print("bias:")
     # print(b.max(), b.min(), torch.isnan(b).any(), torch.isinf(b).any())
     if count["1"] <= 5:
-        print("shape", w.shape, x_1.shape, x_sum_x.shape, b.shape, invsqrt.shape)
+        print("shape", w.shape, x_1.shape, x_sum_x2.shape, invsqrt.shape)
         print("invsqrt", invsqrt.max(), invsqrt.min())
         print("x_sum_x2", x_sum_x2.max(), x_sum_x2.min())
         
