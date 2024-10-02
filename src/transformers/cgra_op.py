@@ -302,7 +302,14 @@ def custom_int_rmsnorm(x, w, bw):
 def custom_int_silu(x, bw, term):
     # x * sigmoid(x)
     o_scale = x.max() * 0.9
+    if o_scale == 0:
+        o_scale = 1.0
     exp_x, scale = custom_int_exp(-x, bw, term)
 
-    return (frac_div(x / o_scale, exp_x, bw) * o_scale / scale).to(x.dtype)
+    ans = (frac_div(x / o_scale, exp_x, bw) * o_scale / scale).to(x.dtype)
+
+    if torch.isnan(ans).any() or (torch.abs(ans) >= 30000).any() or torch.isinf(ans).any():
+        print('silu overflow', ans.dtype, o_scale,, scale, x.max(), x.min(), exp_x.max(), exp_x.min())
+    
+    return ans
 
