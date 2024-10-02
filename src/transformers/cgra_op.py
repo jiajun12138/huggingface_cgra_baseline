@@ -299,12 +299,47 @@ def custom_int_rmsnorm(x, w, bw):
         print('ln overflow111', ans.dtype, ans.max(dim=-1), ans.max(), ans.min(), w)
     return ans.to(x.dtype)
 
+def frac_log2(ex, x, bw, term):
+    # q, scale, zero = asym_quantize(x, bw)
+    # result = torch.zeros_like(x)
+    # factorial = 1
+    ln2 = torch.log(torch.tensor(2))
+    scale1 = torch.tensor(1.0)
+    q1 = -0.75 / scale1
+    scale2 = torch.tensor(1.0 / 3)
+    q2 = 13.0 / 16 / scale2
+    scale3 = scale2 / ln2
+    q3 = ex / scale3
+    if term == 3:
+        tmp1 = frac_add(x, q1, bw)
+        tmp2 = frac_mult(tmp1, tmp1, bw)
+        tmp3 = frac_add(tmp2, q2, bw)
+        tmp4 = frac_mult(tmp3, x, bw)
+        result = frac_add(tmp4, q3, bw)
+    else:
+        assert False
+
+    return result, scale3
+
+def custom_int_log(x, bw, term):
+    # print(x, x.dtype)
+    e_x = torch.floor(torch.log(x) / torch.log(torch.tensor(2.0)))
+
+    m_x = (x / torch.pow(2, e_x)) - 1
+    # print(e_x, m_x)
+    # print(2 ** e_x * (1+m_x))
+
+    log2_e_x, scale = frac_log2(e_x, m_x, bw, term)
+    # print(log2_e_x, scale)
+
+    return log2_e_x, scale
+
 def custom_int_silu(x, bw, term):
     # x * sigmoid(x)
-    o_scale = x.max() * 0.9
-    if o_scale == 0:
-        o_scale = 1.0
+    o_scale = x.max()
+
     exp_x, scale = custom_int_exp(-x, bw, term)
+    print("exp", exp_x * scale, torch.exp(-x))
 
     exp_plus1 = frac_add(exp_x, torch.tensor(1.0) / scale, bw)
 
