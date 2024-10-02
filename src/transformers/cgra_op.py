@@ -252,10 +252,10 @@ def custom_int_layernorm(x, w, b, bw):
 
 def custom_int_rmsnorm(x, w, bw):
     if count["1"] <= 5:
-        print(x.max(), x.min())
+        print(x.max(), x.min(), w.max(), w.min())
     if torch.isnan(x).any():
         print('before ln x overflow', x.dtype)
-    eps = 1e-5
+    eps = 1e-6
     # x_sum_x = torch.tensor(0)
     # x_sum_x2 = torch.tensor(0)
     # scale = x.max() * 0.9
