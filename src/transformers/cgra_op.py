@@ -86,7 +86,8 @@ def custom_int_exp(x, bw, term):
     frac_part = input - int_part
     #print(frac_part)
     # print(int_part)
-    max_int_scale = 2 ** int(input.max() * 0.8)
+    # max_int_scale = 2 ** int(input.max() * 0.8)
+    max_int_scale = 2 ** torch.floor(torch.amax(input, dim=-1, keepdim=True) * 0.9)
     count["1"] += 1
     if count["1"] <= 5:
         print(input.max(), max_int_scale)
@@ -348,10 +349,12 @@ def custom_int_silu(x, bw, term):
     if exp_x[exp_x < 0.0].any():
         print('exp', exp_x.max(), exp_x.min(), exp_x.abs().min())
 
-    if scale.abs() > 2 ** 7:
-        exp_x = exp_x * (scale / 2 ** 7)
-        scale = torch.tensor(2 ** 7)
+    # if scale.abs() > 2 ** 7:
+    #     exp_x = exp_x * (scale / 2 ** 7)
+    #     scale = torch.tensor(2 ** 7)
     
+    scale[scale > 2 ** 7] = 2 ** 7
+
     exp_plus1 = frac_add(exp_x, torch.tensor(1.0) / scale, bw)
 
     # if exp_plus1[exp_plus1 <= 1.0 / scale].any():
