@@ -1,6 +1,6 @@
 import torch, math
 
-frac_bits = {8:3, 16: 11, 32: 9}
+frac_bits = {8:3, 16: 10, 32: 9}
 
 def get_minq_maxq(bits: int, sym: bool):
     if sym:
@@ -86,7 +86,7 @@ def custom_int_exp(x, bw, term):
     frac_part = input - int_part
     #print(frac_part)
     # print(int_part)
-    max_int_scale = 2 ** int(input.max() * 0.9)
+    max_int_scale = 2 ** int(input.max() * 0.8)
     count["1"] += 1
     if count["1"] <= 5:
         print(input.max(), max_int_scale)
@@ -337,10 +337,10 @@ def custom_int_log(x, bw, term):
 def custom_int_silu(x, bw, term):
     # x * sigmoid(x)
     fp_x = x.to(torch.float64)
-    o_scale = x.max() * 0.9
+    o_scale = x.max() * 0.95
 
-    indices1 = fp_x >= 5.0
-    indices2 = fp_x <= -5.0
+    indices1 = fp_x >= 6.0
+    indices2 = fp_x <= -6.0
     fp_x[indices2] = 0.0
     exp_x, scale = custom_int_exp(-fp_x, bw, term)
     # print("exp", exp_x * scale, torch.exp(-x))
@@ -348,9 +348,9 @@ def custom_int_silu(x, bw, term):
     if exp_x[exp_x < 0.0].any():
         print('exp', exp_x.max(), exp_x.min(), exp_x.abs().min())
 
-    if scale.abs() > 2 ** 6:
-        exp_x = exp_x * (scale / 2 ** 6)
-        scale = torch.tensor(2 ** 6)
+    if scale.abs() > 2 ** 7:
+        exp_x = exp_x * (scale / 2 ** 7)
+        scale = torch.tensor(2 ** 7)
     
     exp_plus1 = frac_add(exp_x, torch.tensor(1.0) / scale, bw)
 
