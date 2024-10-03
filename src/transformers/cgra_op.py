@@ -358,14 +358,16 @@ def custom_int_silu(x, bw, term):
     # exp_x[indices] = exp_x[indices] * (scale[indices] / 2 ** 7)
     # scale[indices] = 2 ** 7
 
-    exp_plus1 = frac_add(exp_x, torch.tensor(1.0) / scale, bw)
+    exp_plus1 = exp_x * scale + 1.0
+    ans = (fp_x / exp_plus1).to(x.dtype)
+    # exp_plus1 = frac_add(exp_x, torch.tensor(1.0) / scale, bw)
 
     # if exp_plus1[exp_plus1 <= 1.0 / scale].any():
     #     print('exp_plus', exp_plus1.max(), exp_plus1.min(), exp_plus1.abs().min())
     
     # exp_plus1[exp_plus1 <= 1.0 / scale] = 1.0 / scale
 
-    ans = (frac_div(fp_x / o_scale, exp_plus1, bw) * o_scale / scale).to(x.dtype)
+    # ans = (frac_div(fp_x / o_scale, exp_plus1, bw) * o_scale / scale).to(x.dtype)
 
     ans[indices2] = 0.0
 
