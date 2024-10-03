@@ -352,9 +352,11 @@ def custom_int_silu(x, bw, term):
     # if scale.abs() > 2 ** 7:
     #     exp_x = exp_x * (scale / 2 ** 7)
     #     scale = torch.tensor(2 ** 7)
-    indices = scale > 2 ** 7
-    exp_x[indices] = exp_x[indices] * (scale[indices] / 2 ** 7)
-    scale[indices] = 2 ** 7
+    if (scale > 2 ** 7).any():
+        print("max_scale", scale.max())
+    # indices = scale > 2 ** 7
+    # exp_x[indices] = exp_x[indices] * (scale[indices] / 2 ** 7)
+    # scale[indices] = 2 ** 7
 
     exp_plus1 = frac_add(exp_x, torch.tensor(1.0) / scale, bw)
 
