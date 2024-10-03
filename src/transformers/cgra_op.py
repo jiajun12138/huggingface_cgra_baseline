@@ -354,8 +354,8 @@ def custom_int_silu(x, bw, term):
     
     exp_plus1 = frac_add(exp_x, torch.tensor(1.0) / scale, bw)
 
-    if exp_plus1[exp_plus1 <= 1.0 / scale].any():
-        print('exp_plus', exp_plus1.max(), exp_plus1.min(), exp_plus1.abs().min())
+    # if exp_plus1[exp_plus1 <= 1.0 / scale].any():
+    #     print('exp_plus', exp_plus1.max(), exp_plus1.min(), exp_plus1.abs().min())
     
     exp_plus1[exp_plus1 <= 1.0 / scale] = 1.0 / scale
 
