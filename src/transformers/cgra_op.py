@@ -336,12 +336,13 @@ def custom_int_log(x, bw, term):
 
 def custom_int_silu(x, bw, term):
     # x * sigmoid(x)
+    fp_x = x.to(torch.float64)
     o_scale = x.max() * 0.9
 
-    indices1 = x >= 100.0
-    indices2 = x <= -100.0
-    x[indices2] = 0.0
-    exp_x, scale = custom_int_exp(-x, bw, term)
+    indices1 = fp_x >= 5.0
+    indices2 = fp_x <= -5.0
+    fp_x[indices2] = 0.0
+    exp_x, scale = custom_int_exp(-fp_x, bw, term)
     # print("exp", exp_x * scale, torch.exp(-x))
     exp_x[indices1] = 0.0
     if exp_x[exp_x < 0.0].any():
@@ -358,7 +359,7 @@ def custom_int_silu(x, bw, term):
     
     exp_plus1[exp_plus1 <= 1.0] = 1.0
 
-    ans = (frac_div(x / o_scale, exp_plus1, bw) * o_scale / scale).to(x.dtype)
+    ans = (frac_div(fp_x / o_scale, exp_plus1, bw) * o_scale / scale).to(x.dtype)
 
     ans[indices2] = 0.0
 
