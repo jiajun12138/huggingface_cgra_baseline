@@ -256,11 +256,11 @@ def custom_int_rmsnorm(x, w, bw):
         print(x.max(), x.min(), w.max(), w.min())
     if torch.isnan(x).any():
         print('before ln x overflow', x.dtype)
-    eps = 1e-6
+    eps = 1e-5
     # x_sum_x = torch.tensor(0)
     # x_sum_x2 = torch.tensor(0)
     # scale = x.max() * 0.9
-    scale = torch.amax(x, dim=-1, keepdim=True) * 0.95
+    scale = torch.amax(x, dim=-1, keepdim=True) * 0.6
     x_1 = x / scale
     # count["1"] += 1
     # if count["1"] <= 8:
