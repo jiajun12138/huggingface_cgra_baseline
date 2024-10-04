@@ -267,7 +267,7 @@ def custom_int_rmsnorm(x, w, bw):
     # if count["1"] <= 8:
     # print("statistics:", x.max() * 0.9)
 
-    int_s = 2 ** frac_bits[bw]
+    int_s = 2 ** 16
     x_1 = (x_1 * int_s).to(torch.int64)
 
     N = x_1.shape[-1]
