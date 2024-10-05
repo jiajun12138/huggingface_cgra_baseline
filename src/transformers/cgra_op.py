@@ -262,7 +262,7 @@ def custom_int_rmsnorm(x, w, bw):
     # x_sum_x2 = torch.tensor(0)
     # scale = x.max() * 0.9
     scale = torch.amax(x, dim=-1, keepdim=True) * 0.6
-    N = x_1.shape[-1]
+    N = x.shape[-1]
     x_1 = x / math.sqrt(N)
     # count["1"] += 1
     # if count["1"] <= 8:
