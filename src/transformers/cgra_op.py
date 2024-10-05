@@ -252,26 +252,26 @@ def custom_int_layernorm(x, w, b, bw):
         print('ln overflow111', ans.dtype, ans.max(dim=-1), ans.max(), ans.min(), w, b)
     return ans.to(x.dtype)
 
-def custom_int_rmsnorm(x, w, bw):
+def custom_int_rmsnorm(x, w, eps, bw):
     if count["1"] <= 5:
         print(x.max(), x.min(), w.max(), w.min())
     if torch.isnan(x).any():
         print('before ln x overflow', x.dtype)
-    eps = 1e-5
     # x_sum_x = torch.tensor(0)
     # x_sum_x2 = torch.tensor(0)
     # scale = x.max() * 0.9
-    scale = torch.amax(x, dim=-1, keepdim=True) * 0.6
-    N = x.shape[-1]
-    x_1 = x / math.sqrt(N)
+    scale = torch.amax(x, dim=-1, keepdim=True) * 0.95
+    x_1 = x / scale
     # count["1"] += 1
     # if count["1"] <= 8:
     # print("statistics:", x.max() * 0.9)
+    N = x.shape[-1]
+    sqrt_N = math.sqrt(N)
 
-    int_s = 2 ** 12
-    x_1 = (x_1 * int_s).to(torch.int64)
-    # print(N)
-    x_sum_x2 = (x_1 ** 2).sum(dim=-1, keepdim=True) 
+    int_s = 2 ** frac_bits[bw]
+    x_1 = (x_1 * sqrt_N * int_s).to(torch.int64)
+
+    x_sum_x2 = (x_1 ** 2).sum(dim=-1, keepdim=True)  
     if w is None:
         weight = 1.0
     else:
