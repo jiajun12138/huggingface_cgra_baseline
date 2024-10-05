@@ -260,18 +260,18 @@ def custom_int_rmsnorm(x, w, eps, bw):
     # x_sum_x = torch.tensor(0)
     # x_sum_x2 = torch.tensor(0)
     # scale = x.max() * 0.9
-    scale = torch.amax(x, dim=-1, keepdim=True) * 0.95
+    scale = torch.amax(x, dim=-1, keepdim=True) * 0.9
     x_1 = x / scale
     # count["1"] += 1
     # if count["1"] <= 8:
     # print("statistics:", x.max() * 0.9)
     N = x.shape[-1]
-    sqrt_N = math.sqrt(N)
+    # sqrt_N = math.sqrt(N)
 
     int_s = 2 ** frac_bits[bw]
-    x_1 = (x_1 * sqrt_N * int_s).to(torch.int64)
+    x_1 = torch.round(x_1 * int_s).to(torch.int64)
 
-    x_sum_x2 = (x_1 ** 2).sum(dim=-1, keepdim=True)  
+    x_sum_x2 = (x_1 ** 2).sum(dim=-1, keepdim=True) / N
     if w is None:
         weight = 1.0
     else:
