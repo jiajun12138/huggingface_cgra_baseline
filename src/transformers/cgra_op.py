@@ -268,8 +268,8 @@ def custom_int_rmsnorm(x, w, eps, bw):
     N = x.shape[-1]
     # sqrt_N = math.sqrt(N)
 
-    int_s = 2 ** 20
-    x_1 = torch.round(x_1 * int_s).to(torch.int64)
+    int_s = 2 ** frac_bits[bw]
+    x_1 = torch.round(x_1 * int_s)
 
     x_sum_x2 = (x_1 ** 2).sum(dim=-1, keepdim=True) / N
     if w is None:
