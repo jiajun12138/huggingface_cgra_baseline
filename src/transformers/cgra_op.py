@@ -290,13 +290,13 @@ def custom_int_rmsnorm(x, w, eps, bw):
         print("shape", w.shape, x_1.shape, x_sum_x2.shape, invsqrt.shape)
         print("invsqrt", invsqrt.max(), invsqrt.min())
         print("x_sum_x2", x_sum_x2.max(), x_sum_x2.min())
-        
+    
 
     ans = w * (x_1) * invsqrt
     if torch.isnan(ans.to(x.dtype)).any():
         print('ln overflow', invsqrt.max(), invsqrt.min(), x_sum_x2.max(), x_sum_x2.min())
     if (torch.abs(ans) >= 30000).any():
-        print('ln overflow111', ans.dtype, ans.max(dim=-1), ans.max(), ans.min(), w)
+        print('ln overflow111', ans.dtype, ans.max(dim=-1), ans.max(), ans.min(), w, x_1.min(), invsqrt.max(), invsqrt.min())
     return ans.to(x.dtype)
 
 def frac_log2(ex, x, bw, term):
