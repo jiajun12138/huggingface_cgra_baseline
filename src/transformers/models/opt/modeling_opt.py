@@ -396,11 +396,11 @@ class OPTDecoderLayer(nn.Module):
         self.softmax_bw = config.softmax_bw
         
         self.self_attn_layer_norm = nn.LayerNorm(
-            self.embed_dim, elementwise_affine=config.layer_norm_elementwise_affine, device=config.device
+            self.embed_dim, elementwise_affine=config.layer_norm_elementwise_affine, device='cuda'
         )
         self.fc1 = nn.Linear(self.embed_dim, config.ffn_dim, bias=config.enable_bias)
         self.fc2 = nn.Linear(config.ffn_dim, self.embed_dim, bias=config.enable_bias)
-        self.final_layer_norm = nn.LayerNorm(self.embed_dim, elementwise_affine=config.layer_norm_elementwise_affine, device=config.device)
+        self.final_layer_norm = nn.LayerNorm(self.embed_dim, elementwise_affine=config.layer_norm_elementwise_affine, device='cuda')
 
     def forward(
         self,
