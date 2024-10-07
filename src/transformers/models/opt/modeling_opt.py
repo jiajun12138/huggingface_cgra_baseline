@@ -201,20 +201,21 @@ class OPTAttention(nn.Module):
             attn_weights = attn_weights.view(bsz * self.num_heads, tgt_len, src_len)
 
         # upcast to fp32 if the weights are in fp16. Please see https://github.com/huggingface/transformers/pull/17437
-        if attn_weights.dtype == torch.float16:
-            if self.custom_softmax:
-                if self.softmax_int:
-                    attn_weights = custom_int_softmax(attn_weights, self.softmax_bw, self.softmax_term).to(attn_weights)
-                    # print(torch.isnan(attn_weights).any())
+        with record_function("softmax_1"):
+            if attn_weights.dtype == torch.float16:
+                if self.custom_softmax:
+                    if self.softmax_int:
+                        attn_weights = custom_int_softmax(attn_weights, self.softmax_bw, self.softmax_term).to(attn_weights)
+                        # print(torch.isnan(attn_weights).any())
+                else:
+                    attn_weights = nn.functional.softmax(attn_weights, dim=-1, dtype=torch.float32).to(torch.float16)
             else:
-                attn_weights = nn.functional.softmax(attn_weights, dim=-1, dtype=torch.float32).to(torch.float16)
-        else:
-            if self.custom_softmax:
-                if self.softmax_int:
-                    attn_weights = custom_int_softmax(attn_weights, self.softmax_bw, self.softmax_term).to(attn_weights)
-                    # print(torch.isnan(attn_weights).any())
-            else:
-                attn_weights = nn.functional.softmax(attn_weights, dim=-1)
+                if self.custom_softmax:
+                    if self.softmax_int:
+                        attn_weights = custom_int_softmax(attn_weights, self.softmax_bw, self.softmax_term).to(attn_weights)
+                        # print(torch.isnan(attn_weights).any())
+                else:
+                    attn_weights = nn.functional.softmax(attn_weights, dim=-1)
 
         if layer_head_mask is not None:
             if layer_head_mask.size() != (self.num_heads,):
@@ -395,11 +396,11 @@ class OPTDecoderLayer(nn.Module):
         self.softmax_bw = config.softmax_bw
         
         self.self_attn_layer_norm = nn.LayerNorm(
-            self.embed_dim, elementwise_affine=config.layer_norm_elementwise_affine
+            self.embed_dim, elementwise_affine=config.layer_norm_elementwise_affine, device=config.device
         )
         self.fc1 = nn.Linear(self.embed_dim, config.ffn_dim, bias=config.enable_bias)
         self.fc2 = nn.Linear(config.ffn_dim, self.embed_dim, bias=config.enable_bias)
-        self.final_layer_norm = nn.LayerNorm(self.embed_dim, elementwise_affine=config.layer_norm_elementwise_affine)
+        self.final_layer_norm = nn.LayerNorm(self.embed_dim, elementwise_affine=config.layer_norm_elementwise_affine, device=config.device)
 
     def forward(
         self,
@@ -429,11 +430,12 @@ class OPTDecoderLayer(nn.Module):
         residual = hidden_states
 
         # 125m, 1.7B, ..., 175B applies layer norm BEFORE attention
-        if self.do_layer_norm_before:
-            if self.softmax_bw is not None:
-                hidden_states = custom_int_layernorm(hidden_states, self.self_attn_layer_norm.weight, self.self_attn_layer_norm.bias, self.softmax_bw)
-            else:
-                hidden_states = self.self_attn_layer_norm(hidden_states)
+        with record_function("layernorm_1"):
+            if self.do_layer_norm_before:
+                if self.softmax_bw is not None:
+                    hidden_states = custom_int_layernorm(hidden_states, self.self_attn_layer_norm.weight, self.self_attn_layer_norm.bias, self.softmax_bw)
+                else:
+                    hidden_states = self.self_attn_layer_norm(hidden_states)
 
         # Self Attention
         hidden_states, self_attn_weights, present_key_value = self.self_attn(
@@ -451,8 +453,7 @@ class OPTDecoderLayer(nn.Module):
             if self.softmax_bw is not None:
                 hidden_states = custom_int_layernorm(hidden_states, self.self_attn_layer_norm.weight, self.self_attn_layer_norm.bias, self.softmax_bw)
             else:
-                with record_function("softmax_1"):
-                    hidden_states = self.self_attn_layer_norm(hidden_states)
+                hidden_states = self.self_attn_layer_norm(hidden_states)
 
         # Fully Connected
         hidden_states_shape = hidden_states.shape
@@ -460,7 +461,7 @@ class OPTDecoderLayer(nn.Module):
         residual = hidden_states
 
         # 125m, 1.7B, ..., 175B applies layer norm BEFORE attention
-        with record_function("layernorm_1"):
+        with record_function("layernorm_2"):
             if self.do_layer_norm_before:
                 if self.softmax_bw is not None:
                     hidden_states = custom_int_layernorm(hidden_states, self.final_layer_norm.weight, self.final_layer_norm.bias, self.softmax_bw)
