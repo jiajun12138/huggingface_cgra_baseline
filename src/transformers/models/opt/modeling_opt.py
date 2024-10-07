@@ -452,7 +452,7 @@ class OPTDecoderLayer(nn.Module):
                 hidden_states = custom_int_layernorm(hidden_states, self.self_attn_layer_norm.weight, self.self_attn_layer_norm.bias, self.softmax_bw)
             else:
                 with record_function("softmax_1"):
-                hidden_states = self.self_attn_layer_norm(hidden_states)
+                    hidden_states = self.self_attn_layer_norm(hidden_states)
 
         # Fully Connected
         hidden_states_shape = hidden_states.shape
