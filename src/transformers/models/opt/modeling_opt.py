@@ -20,6 +20,7 @@ import torch
 import torch.utils.checkpoint
 from torch import nn
 from torch.nn import BCEWithLogitsLoss, CrossEntropyLoss, MSELoss
+from torch.profiler import profile, record_function, ProfilerActivity
 
 from ...activations import ACT2FN
 from ...modeling_attn_mask_utils import _prepare_4d_causal_attention_mask
@@ -450,6 +451,7 @@ class OPTDecoderLayer(nn.Module):
             if self.softmax_bw is not None:
                 hidden_states = custom_int_layernorm(hidden_states, self.self_attn_layer_norm.weight, self.self_attn_layer_norm.bias, self.softmax_bw)
             else:
+                with record_function("softmax_1"):
                 hidden_states = self.self_attn_layer_norm(hidden_states)
 
         # Fully Connected
@@ -458,11 +460,12 @@ class OPTDecoderLayer(nn.Module):
         residual = hidden_states
 
         # 125m, 1.7B, ..., 175B applies layer norm BEFORE attention
-        if self.do_layer_norm_before:
-            if self.softmax_bw is not None:
-                hidden_states = custom_int_layernorm(hidden_states, self.final_layer_norm.weight, self.final_layer_norm.bias, self.softmax_bw)
-            else:
-                hidden_states = self.final_layer_norm(hidden_states)
+        with record_function("layernorm_1"):
+            if self.do_layer_norm_before:
+                if self.softmax_bw is not None:
+                    hidden_states = custom_int_layernorm(hidden_states, self.final_layer_norm.weight, self.final_layer_norm.bias, self.softmax_bw)
+                else:
+                    hidden_states = self.final_layer_norm(hidden_states)
 
         hidden_states = self.fc1(hidden_states)
         hidden_states = self.activation_fn(hidden_states)
