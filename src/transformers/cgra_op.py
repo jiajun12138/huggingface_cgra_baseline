@@ -88,7 +88,7 @@ def custom_int_exp(x, bw, term):
     # print(int_part)
     # max_int_scale = 2 ** int(input.max() * 0.8)
     max_int_scale = 2 ** torch.floor(torch.amax(input, dim=-1, keepdim=True) * 0.9)
-    # max_int_scale[max_int_scale > 2 ** 6] = 2 ** 6
+    max_int_scale[max_int_scale > 2 ** 7] = 2 ** 7
     count["1"] += 1
     if count["1"] <= 5:
         print(input.max(), max_int_scale)
@@ -339,8 +339,8 @@ def custom_int_silu(x, bw, term):
     fp_x = x.to(torch.float64)
     o_scale = x.max() * 0.9
 
-    indices1 = fp_x >= 8.0
-    indices2 = fp_x <= -8.0
+    indices1 = fp_x >= 6.0
+    indices2 = fp_x <= -6.0
     fp_x[indices2] = 0.0
     exp_x, scale = custom_int_exp(-fp_x, bw, term)
     # print("exp", exp_x * scale, torch.exp(-x))
