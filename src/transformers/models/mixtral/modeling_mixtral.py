@@ -339,6 +339,7 @@ class MixtralAttention(nn.Module):
         self.is_causal = True
         self.attention_dropout = config.attention_dropout
 
+        self.custom_softmax = config.custom_softmax
         self.softmax_bw = config.softmax_bw
         self.softmax_term = config.softmax_term
         self.softmax_int = config.softmax_int
@@ -717,6 +718,7 @@ class MixtralSparseMoeBlock(nn.Module):
         self.num_experts = config.num_local_experts
         self.top_k = config.num_experts_per_tok
 
+        self.custom_softmax = config.custom_softmax
         self.softmax_bw = config.softmax_bw
         self.softmax_term = config.softmax_term
         self.softmax_int = config.softmax_int
@@ -1014,6 +1016,7 @@ class MixtralModel(MixtralPreTrainedModel):
 
         self.gradient_checkpointing = False
 
+        self.custom_softmax = config.custom_softmax
         self.softmax_bw = config.softmax_bw
         self.softmax_term = config.softmax_term
         self.softmax_int = config.softmax_int
