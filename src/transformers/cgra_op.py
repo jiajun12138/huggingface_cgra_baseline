@@ -260,7 +260,7 @@ def custom_int_rmsnorm(x, w, eps, bw):
     # x_sum_x = torch.tensor(0)
     # x_sum_x2 = torch.tensor(0)
     # scale = x.max() * 0.9
-    scale = torch.abs().amax(x, dim=-1, keepdim=True) * 0.9
+    scale = torch.amax(x.abs(), dim=-1, keepdim=True) * 0.9
     x_1 = x / scale
     # count["1"] += 1
     # if count["1"] <= 8:
