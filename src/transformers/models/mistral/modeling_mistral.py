@@ -167,7 +167,7 @@ class MistralMLP(nn.Module):
         else:
             intermediate_states = custom_int_silu(self.gate_proj(hidden_state), self.softmax_bw, self.softmax_term) 
             
-        return self.down_proj(intermediate_states) * self.up_proj(hidden_state)
+        return self.down_proj(intermediate_states * self.up_proj(hidden_state))
 
 
 # Copied from transformers.models.llama.modeling_llama.repeat_kv
