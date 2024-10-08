@@ -88,7 +88,7 @@ def custom_int_exp(x, bw, term):
     # print(int_part)
     # max_int_scale = 2 ** int(input.max() * 0.8)
     max_int_scale = 2 ** torch.floor(torch.amax(input, dim=-1, keepdim=True) * 0.9)
-    max_int_scale[max_int_scale > 2 ** 7] = 2 ** 7
+    max_int_scale[max_int_scale > 2 ** 6] = 2 ** 6
     count["1"] += 1
     if count["1"] <= 5:
         print(input.max(), max_int_scale)
@@ -260,7 +260,7 @@ def custom_int_rmsnorm(x, w, eps, bw):
     # x_sum_x = torch.tensor(0)
     # x_sum_x2 = torch.tensor(0)
     # scale = x.max() * 0.9
-    scale = torch.amax(x, dim=-1, keepdim=True) * 0.9
+    scale = torch.abs().amax(x, dim=-1, keepdim=True) * 0.9
     x_1 = x / scale
     # count["1"] += 1
     # if count["1"] <= 8:
