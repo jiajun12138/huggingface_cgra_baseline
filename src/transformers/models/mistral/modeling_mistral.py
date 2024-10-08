@@ -163,9 +163,9 @@ class MistralMLP(nn.Module):
     def forward(self, hidden_state):
 
         if self.softmax_bw is None:
-                intermediate_states = self.act_fn(self.gate_proj(hidden_state))
-            else:
-                intermediate_states = custom_int_silu(self.gate_proj(hidden_state), self.softmax_bw, self.softmax_term) 
+            intermediate_states = self.act_fn(self.gate_proj(hidden_state))
+        else:
+            intermediate_states = custom_int_silu(self.gate_proj(hidden_state), self.softmax_bw, self.softmax_term) 
             
         return self.down_proj(intermediate_states) * self.up_proj(hidden_state)
 
