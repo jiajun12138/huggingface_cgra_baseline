@@ -186,7 +186,7 @@ def custom_int_softmax(x, bw, term):
     x_norm = new_x - x_max
     # print("norm input", x_norm, torch.isnan(x_norm).any())
     # print("softmax input", (torch.abs(x_norm) >= 20000).any(), torch.isnan(x_norm).any())
-    x_exp, s = custom_int_exp(x_norm, bw, term)
+    x_exp, _ = custom_int_exp(x_norm, bw, term)
     if torch.isnan(x_exp).any():
         print('x_exp overflow', x_exp.dtype)
     int_s = 2 ** frac_bits[bw]
@@ -260,22 +260,19 @@ def custom_int_rmsnorm(x, w, eps, bw):
     # x_sum_x = torch.tensor(0)
     # x_sum_x2 = torch.tensor(0)
     # scale = x.max() * 0.9
-    scale = torch.amax(x.abs(), dim=-1, keepdim=True) * 0.9
-    x_1 = x / scale
+    # scale = torch.amax(x.abs(), dim=-1, keepdim=True) * 0.9
+    # x_1 = x / torch.amax(x.abs(), dim=-1, keepdim=True) * 0.9
     # count["1"] += 1
     # if count["1"] <= 8:
     # print("statistics:", x.max() * 0.9)
 
     int_s = 2 ** frac_bits[bw]
-    x_1 = (x_1 * int_s).to(torch.int64)
+    x_1 = ((x / torch.amax(x.abs(), dim=-1, keepdim=True) * 0.9) * int_s).to(torch.int64)
 
     N = x.shape[-1]
-    x_sum_x2 = (x_1 ** 2).sum(dim=-1, keepdim=True) / N 
-    if w is None:
-        weight = 1.0
-    else:
-        weight = w
-    invsqrt = 1.0 / (x_sum_x2 + eps).sqrt()
+    # x_sum_x2 = (x_1 ** 2).sum(dim=-1, keepdim=True) / N 
+    
+    invsqrt = 1.0 / (((x_1 ** 2).sum(dim=-1, keepdim=True) / N ) + eps).sqrt()
     # print("statistics:")
     # print(x_1.max(), x_1.max(dim=-1), x_1.min(), x_1.min(dim=-1))
     # print(invsqrt.max(), invsqrt.min(), torch.isnan(invsqrt).any(), torch.isinf(invsqrt).any())
@@ -287,16 +284,16 @@ def custom_int_rmsnorm(x, w, eps, bw):
     # print("bias:")
     # print(b.max(), b.min(), torch.isnan(b).any(), torch.isinf(b).any())
     if count["1"] <= 5:
-        print("shape", w.shape, x_1.shape, x_sum_x2.shape, invsqrt.shape)
+        print("shape", w.shape, x_1.shape,  invsqrt.shape)
         print("invsqrt", invsqrt.max(), invsqrt.min())
-        print("x_sum_x2", x_sum_x2.max(), x_sum_x2.min())
+        # print("x_sum_x2", x_sum_x2.max(), x_sum_x2.min())
     
 
     ans = w * (x_1) * invsqrt
-    if torch.isnan(ans.to(x.dtype)).any():
-        print('ln overflow', invsqrt.max(), invsqrt.min(), x_sum_x2.max(), x_sum_x2.min())
-    if (torch.abs(ans) >= 30000).any():
-        print('ln overflow111', ans.dtype, ans.max(dim=-1), ans.max(), ans.min(), w, x_1.min(), invsqrt.max(), invsqrt.min())
+    # if torch.isnan(ans.to(x.dtype)).any():
+    #     print('ln overflow', invsqrt.max(), invsqrt.min(), x_sum_x2.max(), x_sum_x2.min())
+    # if (torch.abs(ans) >= 30000).any():
+    #     print('ln overflow111', ans.dtype, ans.max(dim=-1), ans.max(), ans.min(), w, x_1.min(), invsqrt.max(), invsqrt.min())
     return ans.to(x.dtype)
 
 def frac_log2(ex, x, bw, term):
@@ -358,7 +355,7 @@ def custom_int_silu(x, bw, term):
     # scale[indices] = 2 ** 7
 
     exp_plus1 = exp_x * scale + 1.0
-    ans = (fp_x / exp_plus1).to(x.dtype)
+    fp_x = (fp_x / exp_plus1).to(x.dtype)
     # exp_plus1 = frac_add(exp_x, torch.tensor(1.0) / scale, bw)
 
     # if exp_plus1[exp_plus1 <= 1.0 / scale].any():
@@ -368,11 +365,11 @@ def custom_int_silu(x, bw, term):
 
     # ans = (frac_div(fp_x / o_scale, exp_plus1, bw) * o_scale / scale).to(x.dtype)
 
-    ans[indices2] = 0.0
+    fp_x[indices2] = 0.0
 
     if torch.isnan(ans).any() or (torch.abs(ans) >= 30000).any() or torch.isinf(ans).any():
         print('silu overflow', o_scale, scale, x.max(), x.abs().min(), x.min(), exp_plus1.max(), exp_plus1.min())
         print('ans', ans.max(), ans.min(), ans.abs().min(), torch.isnan(ans).any())
     
-    return ans
+    return fp_x
 
