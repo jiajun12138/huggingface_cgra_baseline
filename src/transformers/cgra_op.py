@@ -45,7 +45,7 @@ def frac_mult(x, y, bw):
     # if(ans >= 2 ** ((2 * bw) - 2)).any():
     #     print('multiplication overflow', 2 ** ((2 * bw) - 2),x, y, ans)
     # ans[ans >= 2 ** (2 * bw - 2)] = (2 ** (2 * bw - 2)) - 2
-    result = (ans/(2**(scale-1))).to(torch.int64)
+    # result = (ans/(2**(scale-1))).to(torch.int64)
     return ((x*(2**(scale-1))).to(torch.int64) * (y*(2**(scale-1))).to(torch.int64))/(2**(2*scale-2))
 
 def frac_exp2(x, bw, term):
