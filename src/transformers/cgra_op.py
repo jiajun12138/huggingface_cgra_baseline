@@ -36,17 +36,17 @@ def frac_mult(x, y, bw):
     #print(x)
     # print(x,y)
     scale = frac_bits[bw]
-    tmp_x=(x*(2**(scale-1))).to(torch.int64)
+    # tmp_x=(x*(2**(scale-1))).to(torch.int64)
     # print('x: ', x)
     # print(y)
-    tmp_y=(y*(2**(scale-1))).to(torch.int64)
+    # tmp_y=(y*(2**(scale-1))).to(torch.int64)
     # print('y: ', y)
-    ans = (tmp_x * tmp_y).to(torch.int64)
-    if(ans >= 2 ** ((2 * bw) - 2)).any():
-        print('multiplication overflow', 2 ** ((2 * bw) - 2),x, y, ans)
+    # ans = (tmp_x * tmp_y).to(torch.int64)
+    # if(ans >= 2 ** ((2 * bw) - 2)).any():
+    #     print('multiplication overflow', 2 ** ((2 * bw) - 2),x, y, ans)
     # ans[ans >= 2 ** (2 * bw - 2)] = (2 ** (2 * bw - 2)) - 2
     result = (ans/(2**(scale-1))).to(torch.int64)
-    return result/(2**(scale-1))
+    return ((x*(2**(scale-1))).to(torch.int64) * (y*(2**(scale-1))).to(torch.int64))/(2**(2*scale-2))
 
 def frac_exp2(x, bw, term):
     # q, scale, zero = asym_quantize(x, bw)
@@ -99,28 +99,28 @@ def custom_int_exp(x, bw, term):
 def frac_add(x, y, bw):
     #print(x)
     scale = frac_bits[bw]
-    tmp_x=(x*(2**(scale-1))).to(torch.int64)
+    # tmp_x=(x*(2**(scale-1))).to(torch.int64)
     #print('x: ', x)
     #print(y)
-    tmp_y=(y*(2**(scale-1))).to(torch.int64)
+    # tmp_y=(y*(2**(scale-1))).to(torch.int64)
     #print('y: ', y)
-    ans = tmp_x + tmp_y
+    # ans = tmp_x + tmp_y
     # if(ans >=2 **(bw-1)).any():
     #   print('addition overflow')
     # ans[ans >= 2 ** (bw - 1)] = (2 ** (bw - 1)) - 1
-    result = ans.to(torch.int64)
-    return result/(2**(scale-1))
+    # result = ans.to(torch.int64)
+    return ((x*(2**(scale-1))).to(torch.int64) + (y*(2**(scale-1))).to(torch.int64))/(2**(scale-1))
 
 def frac_div(x, y, bw):
     #print(x)
     scale = frac_bits[bw]
-    tmp_x=(x*(2**(scale-1))).to(torch.int64)
+    # tmp_x=(x*(2**(scale-1))).to(torch.int64)
     #print('x: ', x)
     #print(y)
-    tmp_y=(y*(2**(scale-1))).to(torch.int64)
+    # tmp_y=(y*(2**(scale-1))).to(torch.int64)
     # print(x, y, x/y)
     #print('y: ', y)
-    return tmp_x / tmp_y
+    return (x*(2**(scale-1))).to(torch.int64) / (y*(2**(scale-1))).to(torch.int64)
 
 import math
 
