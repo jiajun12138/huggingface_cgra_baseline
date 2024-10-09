@@ -367,9 +367,9 @@ def custom_int_silu(x, bw, term):
 
     fp_x[indices2] = 0.0
 
-    if torch.isnan(ans).any() or (torch.abs(ans) >= 30000).any() or torch.isinf(ans).any():
-        print('silu overflow', o_scale, scale, x.max(), x.abs().min(), x.min(), exp_plus1.max(), exp_plus1.min())
-        print('ans', ans.max(), ans.min(), ans.abs().min(), torch.isnan(ans).any())
+    # if torch.isnan(ans).any() or (torch.abs(ans) >= 30000).any() or torch.isinf(ans).any():
+    #     print('silu overflow', o_scale, scale, x.max(), x.abs().min(), x.min(), exp_plus1.max(), exp_plus1.min())
+    #     print('ans', ans.max(), ans.min(), ans.abs().min(), torch.isnan(ans).any())
     
     return fp_x
 
