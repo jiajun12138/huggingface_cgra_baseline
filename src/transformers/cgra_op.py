@@ -294,9 +294,11 @@ def custom_int_rmsnorm(x, w, eps, bw):
     # count["1"] += 1
     # if count["1"] <= 8:
     # print("statistics:", x.max() * 0.9)
-
-    int_s = 2 ** frac_bits[bw]
-    x_1 = ((x / torch.amax(x.abs(), dim=-1, keepdim=True) * 0.9) * int_s).to(torch.int64)
+    if bw != 64:
+        int_s = 2 ** frac_bits[bw]
+        x_1 = ((x / torch.amax(x.abs(), dim=-1, keepdim=True) * 0.9) * int_s).to(torch.int64)
+    else:
+        x_1 = x.to(torch.float16) / torch.amax(x.abs(), dim=-1, keepdim=True) * 0.9
 
     N = x.shape[-1]
     # x_sum_x2 = (x_1 ** 2).sum(dim=-1, keepdim=True) / N 
@@ -369,36 +371,40 @@ def custom_int_silu(x, bw, term):
     indices2 = fp_x <= -6.0
     fp_x[indices2] = 0.0
     exp_x, scale = custom_int_exp(-fp_x, bw, term)
+    if bw != 64:
     # print("exp", exp_x * scale, torch.exp(-x))
-    exp_x[indices1] = 0.0
-    if exp_x[exp_x < 0.0].any():
-        print('exp', exp_x.max(), exp_x.min(), exp_x.abs().min())
+        exp_x[indices1] = 0.0
+        if exp_x[exp_x < 0.0].any():
+            print('exp', exp_x.max(), exp_x.min(), exp_x.abs().min())
 
-    # if scale.abs() > 2 ** 7:
-    #     exp_x = exp_x * (scale / 2 ** 7)
-    #     scale = torch.tensor(2 ** 7)
-    if (scale > 2 ** 7).any():
-        print("max_scale", scale.max())
-    # indices = scale > 2 ** 7
-    # exp_x[indices] = exp_x[indices] * (scale[indices] / 2 ** 7)
-    # scale[indices] = 2 ** 7
+        # if scale.abs() > 2 ** 7:
+        #     exp_x = exp_x * (scale / 2 ** 7)
+        #     scale = torch.tensor(2 ** 7)
+        if (scale > 2 ** 7).any():
+            print("max_scale", scale.max())
+        # indices = scale > 2 ** 7
+        # exp_x[indices] = exp_x[indices] * (scale[indices] / 2 ** 7)
+        # scale[indices] = 2 ** 7
 
-    exp_plus1 = exp_x * scale + 1.0
-    fp_x = (fp_x / exp_plus1).to(x.dtype)
-    # exp_plus1 = frac_add(exp_x, torch.tensor(1.0) / scale, bw)
+        exp_plus1 = exp_x * scale + 1.0
+        fp_x = (fp_x / exp_plus1).to(x.dtype)
+        # exp_plus1 = frac_add(exp_x, torch.tensor(1.0) / scale, bw)
 
-    # if exp_plus1[exp_plus1 <= 1.0 / scale].any():
-    #     print('exp_plus', exp_plus1.max(), exp_plus1.min(), exp_plus1.abs().min())
-    
-    # exp_plus1[exp_plus1 <= 1.0 / scale] = 1.0 / scale
+        # if exp_plus1[exp_plus1 <= 1.0 / scale].any():
+        #     print('exp_plus', exp_plus1.max(), exp_plus1.min(), exp_plus1.abs().min())
+        
+        # exp_plus1[exp_plus1 <= 1.0 / scale] = 1.0 / scale
 
-    # ans = (frac_div(fp_x / o_scale, exp_plus1, bw) * o_scale / scale).to(x.dtype)
+        # ans = (frac_div(fp_x / o_scale, exp_plus1, bw) * o_scale / scale).to(x.dtype)
 
-    fp_x[indices2] = 0.0
+        fp_x[indices2] = 0.0
 
     # if torch.isnan(ans).any() or (torch.abs(ans) >= 30000).any() or torch.isinf(ans).any():
     #     print('silu overflow', o_scale, scale, x.max(), x.abs().min(), x.min(), exp_plus1.max(), exp_plus1.min())
     #     print('ans', ans.max(), ans.min(), ans.abs().min(), torch.isnan(ans).any())
     
+    else:
+        fp_x /= (exp_x + 1.0)
+
     return fp_x
 
