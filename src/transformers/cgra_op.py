@@ -72,7 +72,7 @@ def frac_exp2(x, bw, term):
         else:
             assert False
     else:
-        result = torch.zeros_like(x, dtype=dtype)
+        result = torch.zeros_like(x)
         for n in range(term):
             result += power / factorial
             power *= x
