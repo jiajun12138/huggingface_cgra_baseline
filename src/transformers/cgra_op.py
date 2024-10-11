@@ -365,6 +365,7 @@ def custom_int_log(x, bw, term):
     return log2_e_x, scale
 
 def custom_int_silu(x, bw, term):
+    return torch.nn.functional.silu(x)
     # x * sigmoid(x)
     fp_x = x.to(torch.float64)
     o_scale = x.max() * 0.9
