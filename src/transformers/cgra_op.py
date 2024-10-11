@@ -55,7 +55,7 @@ def frac_exp2(x, bw, term):
     # q, scale, zero = asym_quantize(x, bw)
     # result = torch.zeros_like(x)
     # factorial = 1
-    ln2 = torch.log(torch.tensor(2))
+    ln2 = torch.log(torch.tensor(2), dtype=x.dtype)
     if bw != 64:
         scale1 = ln2
         q1 = 1.5 / scale1
@@ -72,6 +72,9 @@ def frac_exp2(x, bw, term):
         else:
             assert False
     else:
+        if (torch.isnan(x)).any():
+            print(x.dtype)
+            assert False
         result = torch.zeros_like(x)
         power = torch.ones_like(x)
         factorial = 1
@@ -112,6 +115,7 @@ def custom_int_exp(x, bw, term):
         return q, scale * max_int_scale
     else:
         if (torch.isnan(q)).any():
+            print(x.dtype)
             assert False
         return q * torch.pow(2, int_part), 1
     
@@ -208,7 +212,7 @@ def custom_int_softmax(x, bw, term):
     # return torch.nn.functional.softmax(x, dim=-1)
     new_x = x.to(torch.float64)
     indices = new_x <= -10000
-    x[indices] = 0.0
+    new_x[indices] = 0.0
     # x_clamp = torch.clamp(new_x, min = - 20)
     x_max = torch.max(new_x, -1, keepdim=True)[0]
     x_norm = new_x - x_max
