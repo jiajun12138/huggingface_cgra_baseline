@@ -203,6 +203,7 @@ def custom_int_gelu(x, bw, term):
 
 def custom_int_softmax(x, bw, term):
     # print("softmax input", (torch.abs(x) >= 20000).any(), torch.isnan(x).any())
+    return torch.nn.functional.softmax(x, dim=-1)
     new_x = x.to(torch.float64)
     # x_clamp = torch.clamp(new_x, min = - 20)
     x_max = torch.max(new_x, -1, keepdim=True)[0]
