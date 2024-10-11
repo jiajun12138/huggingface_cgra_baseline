@@ -55,7 +55,7 @@ def frac_exp2(x, bw, term):
     # q, scale, zero = asym_quantize(x, bw)
     # result = torch.zeros_like(x)
     # factorial = 1
-    ln2 = torch.log(torch.tensor(2), dtype=x.dtype)
+    ln2 = torch.log(torch.tensor(2))
     if bw != 64:
         scale1 = ln2
         q1 = 1.5 / scale1
