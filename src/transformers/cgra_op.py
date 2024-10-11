@@ -234,7 +234,7 @@ def custom_int_layernorm(x, w, b, bw):
     # x_sum_x2 = torch.tensor(0)
     # scale = x.max() * 0.9
     scale = torch.amax(x, dim=-1, keepdim=True) * 0.9
-    x_1 = x.to(torch.float64) / scale
+    x_1 = x.to(torch.float16) / scale
     if bw != 64:
         # count["1"] += 1
         # if count["1"] <= 8:
