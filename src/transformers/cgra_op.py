@@ -219,8 +219,8 @@ def custom_int_softmax(x, bw, term):
         x_exp = (x_exp * int_s).to(torch.int64)
         x_sum = x_exp.sum(dim=-1, keepdim=True)
     else:
+        x_exp[indices] = 0.0
         x_sum = x_exp.sum(dim=-1, keepdim=True)
-        x_sum[indices] = 0.0
     if torch.isnan(x_sum).any():
         print('x_sum overflow', x_sum.dtype)
     # print("sum should be", x_exp / x_sum)
