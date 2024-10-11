@@ -203,7 +203,6 @@ def custom_int_gelu(x, bw, term):
 
 def custom_int_softmax(x, bw, term):
     # print("softmax input", (torch.abs(x) >= 20000).any(), torch.isnan(x).any())
-    return torch.nn.functional.softmax(x, dim=-1)
     new_x = x.to(torch.float64)
     # x_clamp = torch.clamp(new_x, min = - 20)
     x_max = torch.max(new_x, -1, keepdim=True)[0]
@@ -235,7 +234,7 @@ def custom_int_layernorm(x, w, b, bw):
     # x_sum_x2 = torch.tensor(0)
     # scale = x.max() * 0.9
     scale = torch.amax(x, dim=-1, keepdim=True) * 0.9
-    x_1 = x / scale
+    x_1 = x.to(torch.float64) / scale
     if bw != 64:
         # count["1"] += 1
         # if count["1"] <= 8:
@@ -244,7 +243,7 @@ def custom_int_layernorm(x, w, b, bw):
         int_s = 2 ** frac_bits[bw]
         x_1 = (x_1 * int_s).to(torch.int64)
     else:
-        x_1 = x
+        x_1 = x_1
 
     N = x_1.shape[-1]
     # print(N)
