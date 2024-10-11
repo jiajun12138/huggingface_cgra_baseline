@@ -406,5 +406,5 @@ def custom_int_silu(x, bw, term):
     else:
         fp_x /= (exp_x + 1.0)
 
-    return fp_x
+    return fp_x.to(x)
 
