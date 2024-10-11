@@ -298,7 +298,9 @@ def custom_int_rmsnorm(x, w, eps, bw):
         int_s = 2 ** frac_bits[bw]
         x_1 = ((x / torch.amax(x.abs(), dim=-1, keepdim=True) * 0.9) * int_s).to(torch.int64)
     else:
-        x_1 = x.to(torch.float16) / torch.amax(x.abs(), dim=-1, keepdim=True) * 0.9
+        variance = x.pow(2).mean(-1, keepdim=True)
+        return w * x * torch.rsqrt(variance + eps)
+        # x_1 = x / torch.amax(x.abs(), dim=-1, keepdim=True) * 0.9
 
     N = x.shape[-1]
     # x_sum_x2 = (x_1 ** 2).sum(dim=-1, keepdim=True) / N 
