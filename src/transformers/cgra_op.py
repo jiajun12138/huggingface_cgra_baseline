@@ -203,8 +203,9 @@ def custom_int_gelu(x, bw, term):
 
 def custom_int_softmax(x, bw, term):
     # print("softmax input", (torch.abs(x) >= 20000).any(), torch.isnan(x).any())
-    return torch.nn.functional.softmax(x, dim=-1)
+    # return torch.nn.functional.softmax(x, dim=-1)
     new_x = x.to(torch.float64)
+    indices = new_x <= -10000
     # x_clamp = torch.clamp(new_x, min = - 20)
     x_max = torch.max(new_x, -1, keepdim=True)[0]
     x_norm = new_x - x_max
@@ -219,6 +220,7 @@ def custom_int_softmax(x, bw, term):
         x_sum = x_exp.sum(dim=-1, keepdim=True)
     else:
         x_sum = x_exp.sum(dim=-1, keepdim=True)
+        x_sum[indices] = 0.0
     if torch.isnan(x_sum).any():
         print('x_sum overflow', x_sum.dtype)
     # print("sum should be", x_exp / x_sum)
@@ -283,8 +285,8 @@ def custom_int_layernorm(x, w, b, bw):
     return ans.to(x.dtype)
 
 def custom_int_rmsnorm(x, w, eps, bw):
-    if count["1"] <= 5:
-        print(x.max(), x.min(), w.max(), w.min())
+    # if count["1"] <= 5:
+    #     print(x.max(), x.min(), w.max(), w.min())
     if torch.isnan(x).any():
         print('before ln x overflow', x.dtype)
     # x_sum_x = torch.tensor(0)
@@ -299,8 +301,9 @@ def custom_int_rmsnorm(x, w, eps, bw):
         int_s = 2 ** frac_bits[bw]
         x_1 = ((x / torch.amax(x.abs(), dim=-1, keepdim=True) * 0.9) * int_s).to(torch.int64)
     else:
-        variance = x.pow(2).mean(-1, keepdim=True)
-        return w * x * torch.rsqrt(variance + eps)
+        x_1 = x.to(torch.float64)
+        variance = x_1.pow(2).mean(-1, keepdim=True)
+        return (w * x_1 * torch.rsqrt(variance + eps)).to(x)
         # x_1 = x / torch.amax(x.abs(), dim=-1, keepdim=True) * 0.9
 
     N = x.shape[-1]
@@ -317,9 +320,9 @@ def custom_int_rmsnorm(x, w, eps, bw):
     # print(w.max(), w.min(), torch.isnan(w).any(), torch.isinf(w).any())
     # print("bias:")
     # print(b.max(), b.min(), torch.isnan(b).any(), torch.isinf(b).any())
-    if count["1"] <= 5:
-        print("shape", w.shape, x_1.shape,  invsqrt.shape)
-        print("invsqrt", invsqrt.max(), invsqrt.min())
+    # if count["1"] <= 5:
+    #     print("shape", w.shape, x_1.shape,  invsqrt.shape)
+    #     print("invsqrt", invsqrt.max(), invsqrt.min())
         # print("x_sum_x2", x_sum_x2.max(), x_sum_x2.min())
     
 
