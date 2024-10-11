@@ -35,7 +35,10 @@ def asym_dequantize(q, scale, zero):
 def frac_mult(x, y, bw):
     #print(x)
     # print(x,y)
-    scale = frac_bits[bw]
+    if bw != 64:
+        scale = frac_bits[bw]
+    else:
+        return x * y
     # tmp_x=(x*(2**(scale-1))).to(torch.int64)
     # print('x: ', x)
     # print(y)
@@ -53,20 +56,29 @@ def frac_exp2(x, bw, term):
     # result = torch.zeros_like(x)
     # factorial = 1
     ln2 = torch.log(torch.tensor(2))
-    scale1 = ln2
-    q1 = 1.5 / scale1
-    scale2 = scale1 ** 2 / 6
-    q2 = 0.625 / scale2
-    scale3 = scale2 * ln2
-    q3 = 1.0 / scale3
-    if term == 3:
-        tmp1 = frac_add(x, q1, bw)
-        tmp2 = frac_mult(tmp1, tmp1, bw)
-        tmp3 = frac_add(tmp2, q2, bw)
-        tmp4 = frac_mult(tmp3, x, bw)
-        result = frac_add(tmp4, q3, bw)
+    if bw != 64:
+        scale1 = ln2
+        q1 = 1.5 / scale1
+        scale2 = scale1 ** 2 / 6
+        q2 = 0.625 / scale2
+        scale3 = scale2 * ln2
+        q3 = 1.0 / scale3
+        if term == 3:
+            tmp1 = frac_add(x, q1, bw)
+            tmp2 = frac_mult(tmp1, tmp1, bw)
+            tmp3 = frac_add(tmp2, q2, bw)
+            tmp4 = frac_mult(tmp3, x, bw)
+            result = frac_add(tmp4, q3, bw)
+        else:
+            assert False
     else:
-        assert False
+        result = torch.zeros_like(x, dtype=dtype)
+        for n in range(term):
+            result += power / factorial
+            power *= x
+            power *= ln2
+            factorial *= (n + 1)
+        scale3 = 1
 
     return result, scale3
 
@@ -93,12 +105,18 @@ def custom_int_exp(x, bw, term):
     if count["1"] <= 5:
         print(input.max(), max_int_scale)
     q, scale = frac_exp2(frac_part, bw, term)
-    q = q * torch.pow(2, int_part) / max_int_scale
-    return q, scale * max_int_scale
+    if bw != 64:
+        q = q * torch.pow(2, int_part) / max_int_scale
+        return q, scale * max_int_scale
+    else:
+        return q * torch.pow(2, int_part), 1
     
 def frac_add(x, y, bw):
     #print(x)
-    scale = frac_bits[bw]
+    if bw != 64:
+        scale = frac_bits[bw]
+    else:
+        return x + y
     # tmp_x=(x*(2**(scale-1))).to(torch.int64)
     #print('x: ', x)
     #print(y)
@@ -113,7 +131,10 @@ def frac_add(x, y, bw):
 
 def frac_div(x, y, bw):
     #print(x)
-    scale = frac_bits[bw]
+    if bw != 64:
+        scale = frac_bits[bw]
+    else:
+        return x / y
     # tmp_x=(x*(2**(scale-1))).to(torch.int64)
     #print('x: ', x)
     #print(y)
@@ -189,14 +210,17 @@ def custom_int_softmax(x, bw, term):
     x_exp, _ = custom_int_exp(x_norm, bw, term)
     if torch.isnan(x_exp).any():
         print('x_exp overflow', x_exp.dtype)
-    int_s = 2 ** frac_bits[bw]
-    x_exp = (x_exp * int_s).to(torch.int64)
-    x_sum = x_exp.sum(dim=-1, keepdim=True)
+    if bw != 64:
+        int_s = 2 ** frac_bits[bw]
+        x_exp = (x_exp * int_s).to(torch.int64)
+        x_sum = x_exp.sum(dim=-1, keepdim=True)
+    else:
+        x_sum = x_exp.sum(dim=-1, keepdim=True)
     if torch.isnan(x_sum).any():
         print('x_sum overflow', x_sum.dtype)
     # print("sum should be", x_exp / x_sum)
 
-    return x_exp.to(torch.float64) / x_sum.to(torch.float64)
+    return x_exp.to(x) / x_sum.to(x)
     # return frac_div(x_exp, x_sum, bw)
     # return x_exp / x_sum
 
@@ -207,14 +231,17 @@ def custom_int_layernorm(x, w, b, bw):
     # x_sum_x = torch.tensor(0)
     # x_sum_x2 = torch.tensor(0)
     # scale = x.max() * 0.9
-    scale = torch.amax(x, dim=-1, keepdim=True) * 0.9
-    x_1 = x / scale
-    # count["1"] += 1
-    # if count["1"] <= 8:
-    # print("statistics:", x.max() * 0.9)
+    if bw != 64:
+        scale = torch.amax(x, dim=-1, keepdim=True) * 0.9
+        x_1 = x / scale
+        # count["1"] += 1
+        # if count["1"] <= 8:
+        # print("statistics:", x.max() * 0.9)
 
-    int_s = 2 ** frac_bits[bw]
-    x_1 = (x_1 * int_s).to(torch.int64)
+        int_s = 2 ** frac_bits[bw]
+        x_1 = (x_1 * int_s).to(torch.int64)
+    else:
+        x_1 = x
 
     N = x_1.shape[-1]
     # print(N)
