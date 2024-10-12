@@ -110,9 +110,11 @@ def custom_int_exp(x, bw, term):
         print(input.max(), max_int_scale)
     q, scale = frac_exp2(frac_part, bw, term)
     if bw != 64:
-        # max_int_scale = 2 ** int(input.max() * 0.8)
-        max_int_scale = 2 ** torch.floor(torch.amax(input, dim=-1, keepdim=True) * 0.9)
-        max_int_scale[max_int_scale > 2 ** 6] = 2 ** 6
+        max_int_scale = 2 ** int(input.max() * 0.8)
+        if max_int_scale > 2 ** 6:
+            max_int_scale = 2 ** 6
+        # max_int_scale = 2 ** torch.floor(torch.amax(input, dim=-1, keepdim=True) * 0.9)
+        # max_int_scale[max_int_scale > 2 ** 6] = 2 ** 6
         q = q * torch.pow(2, int_part) / max_int_scale
         return q, scale * max_int_scale
     else:
@@ -213,8 +215,6 @@ def custom_int_softmax(x, bw, term):
     # print("softmax input", (torch.abs(x) >= 20000).any(), torch.isnan(x).any())
     # return torch.nn.functional.softmax(x, dim=-1)
     new_x = x.to(torch.float64)
-    indices = new_x <= -10000
-    new_x[indices] = 0.0
     # x_clamp = torch.clamp(new_x, min = - 20)
     x_max = torch.max(new_x, -1, keepdim=True)[0]
     x_norm = new_x - x_max
