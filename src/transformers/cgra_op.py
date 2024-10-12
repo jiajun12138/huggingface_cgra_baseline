@@ -103,7 +103,7 @@ def custom_int_exp(x, bw, term):
     frac_part = input - int_part
     #print(frac_part)
     # print(int_part)
-    max_int_scale = 2 ** int(input.max() * 0.9)
+    max_int_scale = 2 ** torch.floor(input.max(dim=-1, keepdim=True) * 0.9)
     max_int_scale[max_int_scale > 2 ** 6] = 2 ** 6
     count["1"] += 1
     if count["1"] <= 5:
