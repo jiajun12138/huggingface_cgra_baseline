@@ -54,6 +54,8 @@ from .configuration_mixtral import MixtralConfig
 if is_flash_attn_2_available():
     from ...modeling_flash_attention_utils import _flash_attention_forward
 
+from ...cgra_op import custom_int_softmax, custom_int_silu, custom_int_rmsnorm
+
 # This makes `_prepare_4d_causal_attention_mask` a leaf function in the FX graph.
 # It means that the function will not be traced through and simply appear as a node in the graph.
 if is_torch_fx_available():
@@ -337,6 +339,11 @@ class MixtralAttention(nn.Module):
         self.is_causal = True
         self.attention_dropout = config.attention_dropout
 
+        self.custom_softmax = config.custom_softmax
+        self.softmax_bw = config.softmax_bw
+        self.softmax_term = config.softmax_term
+        self.softmax_int = config.softmax_int
+
         if (self.head_dim * self.num_heads) != self.hidden_size:
             raise ValueError(
                 f"hidden_size must be divisible by num_heads (got `hidden_size`: {self.hidden_size}"
@@ -409,7 +416,21 @@ class MixtralAttention(nn.Module):
             attn_weights = attn_weights + causal_mask
 
         # upcast attention to fp32
-        attn_weights = nn.functional.softmax(attn_weights, dim=-1, dtype=torch.float32).to(query_states.dtype)
+        # attn_weights = nn.functional.softmax(attn_weights, dim=-1, dtype=torch.float32).to(query_states.dtype)
+        if attn_weights.dtype == torch.float16:
+            if self.custom_softmax:
+                if self.softmax_int:
+                    attn_weights = custom_int_softmax(attn_weights, self.softmax_bw, self.softmax_term).to(query_states.dtype)
+                    # print(torch.isnan(attn_weights).any())
+            else:
+                attn_weights = nn.functional.softmax(attn_weights, dim=-1, dtype=torch.float32).to(query_states.dtype)
+        else:
+            if self.custom_softmax:
+                if self.softmax_int:
+                    attn_weights = custom_int_softmax(attn_weights, self.softmax_bw, self.softmax_term).to(query_states.dtype)
+                    # print(torch.isnan(attn_weights).any())
+            else:
+                attn_weights = nn.functional.softmax(attn_weights, dim=-1, dtype=torch.float32).to(query_states.dtype)
         attn_weights = nn.functional.dropout(attn_weights, p=self.attention_dropout, training=self.training)
         attn_output = torch.matmul(attn_weights, value_states)
 
@@ -697,6 +718,11 @@ class MixtralSparseMoeBlock(nn.Module):
         self.num_experts = config.num_local_experts
         self.top_k = config.num_experts_per_tok
 
+        self.custom_softmax = config.custom_softmax
+        self.softmax_bw = config.softmax_bw
+        self.softmax_term = config.softmax_term
+        self.softmax_int = config.softmax_int
+
         # gating
         self.gate = nn.Linear(self.hidden_dim, self.num_experts, bias=False)
 
@@ -713,8 +739,22 @@ class MixtralSparseMoeBlock(nn.Module):
         hidden_states = hidden_states.view(-1, hidden_dim)
         # router_logits: (batch * sequence_length, n_experts)
         router_logits = self.gate(hidden_states)
-
-        routing_weights = F.softmax(router_logits, dim=1, dtype=torch.float)
+        if attn_weights.dtype == torch.float16:
+            if self.custom_softmax:
+                if self.softmax_int:
+                    routing_weights = custom_int_softmax(router_logits, self.softmax_bw, self.softmax_term)
+                    # print(torch.isnan(attn_weights).any())
+            else:
+                routing_weights = nn.functional.softmax(router_logits, dim=-1, dtype=torch.float)
+        else:
+            if self.custom_softmax:
+                if self.softmax_int:
+                    routing_weights = custom_int_softmax(router_logits, self.softmax_bw, self.softmax_term)
+                    # print(torch.isnan(attn_weights).any())
+            else:
+                routing_weights = nn.functional.softmax(router_logits, dim=-1, dtype=torch.float)
+        
+        # routing_weights = F.softmax(router_logits, dim=1, dtype=torch.float)
         routing_weights, selected_experts = torch.topk(routing_weights, self.top_k, dim=-1)
         routing_weights /= routing_weights.sum(dim=-1, keepdim=True)
         # we cast back to the input dtype
@@ -793,7 +833,13 @@ class MixtralDecoderLayer(nn.Module):
 
         residual = hidden_states
 
-        hidden_states = self.input_layernorm(hidden_states)
+        if self.softmax_bw is not None:
+            # hidden_states = self.input_layernorm(hidden_states)
+            hidden_states = custom_int_rmsnorm(hidden_states, self.input_layernorm.weight, self.input_layernorm.variance_epsilon, self.softmax_bw)
+        else:
+            # hidden_states = self.ln_cross_attn(hidden_states)
+            hidden_states = self.input_layernorm(hidden_states)
+        # hidden_states = self.input_layernorm(hidden_states)
 
         # Self Attention
         hidden_states, self_attn_weights, present_key_value = self.self_attn(
@@ -969,6 +1015,11 @@ class MixtralModel(MixtralPreTrainedModel):
         self.norm = MixtralRMSNorm(config.hidden_size, eps=config.rms_norm_eps)
 
         self.gradient_checkpointing = False
+
+        self.custom_softmax = config.custom_softmax
+        self.softmax_bw = config.softmax_bw
+        self.softmax_term = config.softmax_term
+        self.softmax_int = config.softmax_int
         # Initialize weights and apply final processing
         self.post_init()
 
@@ -1088,7 +1139,14 @@ class MixtralModel(MixtralPreTrainedModel):
             if output_router_logits:
                 all_router_logits += (layer_outputs[-1],)
 
-        hidden_states = self.norm(hidden_states)
+        if self.softmax_bw is not None:
+            # hidden_states = self.input_layernorm(hidden_states)
+            hidden_states = custom_int_rmsnorm(hidden_states, self.norm.weight, self.norm.variance_epsilon, self.softmax_bw)
+        else:
+            # hidden_states = self.ln_cross_attn(hidden_states)
+            hidden_states = self.norm(hidden_states)
+        # hidden_states = self.input_layernorm(hidden_states)
+        # hidden_states = self.norm(hidden_states)
 
         # add hidden states from the last decoder layer
         if output_hidden_states:

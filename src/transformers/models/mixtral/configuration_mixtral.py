@@ -133,6 +133,10 @@ class MixtralConfig(PretrainedConfig):
         output_router_logits=False,
         router_aux_loss_coef=0.001,
         router_jitter_noise=0.0,
+        custom_softmax=False,
+        softmax_int=False,
+        softmax_bw=None,
+        softmax_term=None,
         **kwargs,
     ):
         self.vocab_size = vocab_size
@@ -160,6 +164,10 @@ class MixtralConfig(PretrainedConfig):
         self.output_router_logits = output_router_logits
         self.router_aux_loss_coef = router_aux_loss_coef
         self.router_jitter_noise = router_jitter_noise
+        self.custom_softmax = custom_softmax
+        self.softmax_bw = softmax_bw
+        self.softmax_term = softmax_term
+        self.softmax_int = softmax_int
         super().__init__(
             pad_token_id=pad_token_id,
             bos_token_id=bos_token_id,

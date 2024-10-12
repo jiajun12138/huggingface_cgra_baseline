@@ -50,6 +50,8 @@ from ...utils import (
 )
 from .configuration_llama import LlamaConfig
 
+from ...cgra_op import custom_int_softmax, custom_int_silu, custom_int_rmsnorm
+
 
 logger = logging.get_logger(__name__)
 
@@ -287,6 +289,9 @@ class LlamaMLP(nn.Module):
         self.gate_proj = nn.Linear(self.hidden_size, self.intermediate_size, bias=config.mlp_bias)
         self.up_proj = nn.Linear(self.hidden_size, self.intermediate_size, bias=config.mlp_bias)
         self.down_proj = nn.Linear(self.intermediate_size, self.hidden_size, bias=config.mlp_bias)
+        self.softmax_bw = config.softmax_bw
+        self.softmax_term = config.softmax_term
+        self.softmax_int = config.softmax_int
         self.act_fn = ACT2FN[config.hidden_act]
 
     def forward(self, x):
@@ -301,13 +306,23 @@ class LlamaMLP(nn.Module):
             )
             up_proj = torch.cat([F.linear(x, up_proj_slices[i]) for i in range(self.config.pretraining_tp)], dim=-1)
 
-            intermediate_states = (self.act_fn(gate_proj) * up_proj).split(slice, dim=2)
+            if self.softmax_bw is None:
+                intermediate_states = (self.act_fn(gate_proj) * up_proj).split(slice, dim=2)
+            else:
+                intermediate_states = (custom_int_silu(gate_proj, self.softmax_bw, self.softmax_term) * up_proj).split(slice, dim=2)
             down_proj = [
                 F.linear(intermediate_states[i], down_proj_slices[i]) for i in range(self.config.pretraining_tp)
             ]
             down_proj = sum(down_proj)
         else:
-            down_proj = self.down_proj(self.act_fn(self.gate_proj(x)) * self.up_proj(x))
+
+            if self.softmax_bw is None:
+                down_proj = self.down_proj(self.act_fn(self.gate_proj(x)) * self.up_proj(x))
+            else:
+                down_proj = self.down_proj(
+                    custom_int_silu(self.gate_proj(x), self.softmax_bw, self.softmax_term) * self.up_proj(x)
+                )
+
 
         return down_proj
 
@@ -347,6 +362,11 @@ class LlamaAttention(nn.Module):
         self.max_position_embeddings = config.max_position_embeddings
         self.rope_theta = config.rope_theta
         self.is_causal = True
+
+        self.custom_softmax = config.custom_softmax
+        self.softmax_int = config.softmax_int
+        self.softmax_bw = config.softmax_bw
+        self.softmax_term = config.softmax_term
 
         self.q_proj = nn.Linear(self.hidden_size, self.num_heads * self.head_dim, bias=config.attention_bias)
         self.k_proj = nn.Linear(self.hidden_size, self.num_key_value_heads * self.head_dim, bias=config.attention_bias)
@@ -422,7 +442,21 @@ class LlamaAttention(nn.Module):
             attn_weights = attn_weights + causal_mask
 
         # upcast attention to fp32
-        attn_weights = nn.functional.softmax(attn_weights, dim=-1, dtype=torch.float32).to(query_states.dtype)
+        if attn_weights.dtype == torch.float16:
+            if self.custom_softmax:
+                if self.softmax_int:
+                    attn_weights = custom_int_softmax(attn_weights, self.softmax_bw, self.softmax_term).to(query_states.dtype)
+                    # print(torch.isnan(attn_weights).any())
+            else:
+                attn_weights = nn.functional.softmax(attn_weights, dim=-1, dtype=torch.float32).to(query_states.dtype)
+        else:
+            if self.custom_softmax:
+                if self.softmax_int:
+                    attn_weights = custom_int_softmax(attn_weights, self.softmax_bw, self.softmax_term).to(query_states.dtype)
+                    # print(torch.isnan(attn_weights).any())
+            else:
+                attn_weights = nn.functional.softmax(attn_weights, dim=-1, dtype=torch.float32).to(query_states.dtype)
+        # attn_weights = nn.functional.softmax(attn_weights, dim=-1, dtype=torch.float32).to(query_states.dtype)
         attn_weights = nn.functional.dropout(attn_weights, p=self.attention_dropout, training=self.training)
         attn_output = torch.matmul(attn_weights, value_states)
 
@@ -679,6 +713,10 @@ class LlamaDecoderLayer(nn.Module):
     def __init__(self, config: LlamaConfig, layer_idx: int):
         super().__init__()
         self.hidden_size = config.hidden_size
+        # self.custom_softmax = config.custom_softmax
+        # self.softmax_int = config.softmax_int
+        self.softmax_bw = config.softmax_bw
+        # self.softmax_term = config.softmax_term
 
         self.self_attn = LLAMA_ATTENTION_CLASSES[config._attn_implementation](config=config, layer_idx=layer_idx)
 
@@ -722,7 +760,12 @@ class LlamaDecoderLayer(nn.Module):
         """
         residual = hidden_states
 
-        hidden_states = self.input_layernorm(hidden_states)
+        if self.softmax_bw is not None:
+            # hidden_states = self.input_layernorm(hidden_states)
+            hidden_states = custom_int_rmsnorm(hidden_states, self.input_layernorm.weight, self.input_layernorm.variance_epsilon, self.softmax_bw)
+        else:
+            # hidden_states = self.ln_cross_attn(hidden_states)
+            hidden_states = self.input_layernorm(hidden_states)
 
         # Self Attention
         hidden_states, self_attn_weights, present_key_value = self.self_attn(
@@ -740,7 +783,12 @@ class LlamaDecoderLayer(nn.Module):
 
         # Fully Connected
         residual = hidden_states
-        hidden_states = self.post_attention_layernorm(hidden_states)
+        if self.softmax_bw is not None:
+            # hidden_states = self.post_attention_layernorm(hidden_states)
+            hidden_states = custom_int_rmsnorm(hidden_states, self.post_attention_layernorm.weight, self.input_layernorm.variance_epsilon, self.softmax_bw)
+        else:
+            # hidden_states = self.ln_cross_attn(hidden_states)
+            hidden_states = self.post_attention_layernorm(hidden_states)
         hidden_states = self.mlp(hidden_states)
         hidden_states = residual + hidden_states
 

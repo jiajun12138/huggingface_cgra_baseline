@@ -48,6 +48,8 @@ from ...utils import (
 )
 from .configuration_mistral import MistralConfig
 
+from ...cgra_op import custom_int_softmax, custom_int_silu, custom_int_rmsnorm
+
 
 if is_flash_attn_2_available():
     from ...modeling_flash_attention_utils import _flash_attention_forward
@@ -153,8 +155,19 @@ class MistralMLP(nn.Module):
         self.down_proj = nn.Linear(self.intermediate_size, self.hidden_size, bias=False)
         self.act_fn = ACT2FN[config.hidden_act]
 
+        self.custom_softmax = config.custom_softmax
+        self.softmax_bw = config.softmax_bw
+        self.softmax_term = config.softmax_term
+        self.softmax_int = config.softmax_int
+
     def forward(self, hidden_state):
-        return self.down_proj(self.act_fn(self.gate_proj(hidden_state)) * self.up_proj(hidden_state))
+
+        if self.softmax_bw is None:
+            intermediate_states = self.act_fn(self.gate_proj(hidden_state))
+        else:
+            intermediate_states = custom_int_silu(self.gate_proj(hidden_state), self.softmax_bw, self.softmax_term) 
+            
+        return self.down_proj(intermediate_states * self.up_proj(hidden_state))
 
 
 # Copied from transformers.models.llama.modeling_llama.repeat_kv
@@ -196,6 +209,11 @@ class MistralAttention(nn.Module):
         self.max_position_embeddings = config.max_position_embeddings
         self.rope_theta = config.rope_theta
         self.is_causal = True
+
+        self.custom_softmax = config.custom_softmax
+        self.softmax_bw = config.softmax_bw
+        self.softmax_term = config.softmax_term
+        self.softmax_int = config.softmax_int
 
         self.q_proj = nn.Linear(self.hidden_size, self.num_heads * self.head_dim, bias=False)
         self.k_proj = nn.Linear(self.hidden_size, self.num_key_value_heads * self.head_dim, bias=False)
@@ -246,7 +264,21 @@ class MistralAttention(nn.Module):
             attn_weights = attn_weights + causal_mask
 
         # upcast attention to fp32
-        attn_weights = nn.functional.softmax(attn_weights, dim=-1, dtype=torch.float32).to(query_states.dtype)
+        if attn_weights.dtype == torch.float16:
+            if self.custom_softmax:
+                if self.softmax_int:
+                    attn_weights = custom_int_softmax(attn_weights, self.softmax_bw, self.softmax_term).to(query_states.dtype)
+                    # print(torch.isnan(attn_weights).any())
+            else:
+                attn_weights = nn.functional.softmax(attn_weights, dim=-1, dtype=torch.float32).to(query_states.dtype)
+        else:
+            if self.custom_softmax:
+                if self.softmax_int:
+                    attn_weights = custom_int_softmax(attn_weights, self.softmax_bw, self.softmax_term).to(query_states.dtype)
+                    # print(torch.isnan(attn_weights).any())
+            else:
+                attn_weights = nn.functional.softmax(attn_weights, dim=-1, dtype=torch.float32).to(query_states.dtype)
+        # attn_weights = nn.functional.softmax(attn_weights, dim=-1, dtype=torch.float32).to(query_states.dtype)
         attn_weights = nn.functional.dropout(attn_weights, p=self.attention_dropout, training=self.training)
         attn_output = torch.matmul(attn_weights, value_states)
 
@@ -507,7 +539,7 @@ class MistralDecoderLayer(nn.Module):
         self.hidden_size = config.hidden_size
 
         self.self_attn = MISTRAL_ATTENTION_CLASSES[config._attn_implementation](config=config, layer_idx=layer_idx)
-
+        self.softmax_bw = config.softmax_bw
         self.mlp = MistralMLP(config)
         self.input_layernorm = MistralRMSNorm(config.hidden_size, eps=config.rms_norm_eps)
         self.post_attention_layernorm = MistralRMSNorm(config.hidden_size, eps=config.rms_norm_eps)
@@ -544,7 +576,13 @@ class MistralDecoderLayer(nn.Module):
         """
         residual = hidden_states
 
-        hidden_states = self.input_layernorm(hidden_states)
+        if self.softmax_bw is not None:
+            # hidden_states = self.input_layernorm(hidden_states)
+            hidden_states = custom_int_rmsnorm(hidden_states, self.input_layernorm.weight, self.input_layernorm.variance_epsilon, self.softmax_bw)
+        else:
+            # hidden_states = self.ln_cross_attn(hidden_states)
+            hidden_states = self.input_layernorm(hidden_states)
+        # hidden_states = self.input_layernorm(hidden_states)
 
         # Self Attention
         hidden_states, self_attn_weights, present_key_value = self.self_attn(
@@ -561,7 +599,13 @@ class MistralDecoderLayer(nn.Module):
 
         # Fully Connected
         residual = hidden_states
-        hidden_states = self.post_attention_layernorm(hidden_states)
+        if self.softmax_bw is not None:
+            # hidden_states = self.post_attention_layernorm(hidden_states)
+            hidden_states = custom_int_rmsnorm(hidden_states, self.post_attention_layernorm.weight, self.input_layernorm.variance_epsilon, self.softmax_bw)
+        else:
+            # hidden_states = self.ln_cross_attn(hidden_states)
+            hidden_states = self.post_attention_layernorm(hidden_states)
+        # hidden_states = self.post_attention_layernorm(hidden_states)
         hidden_states = self.mlp(hidden_states)
         hidden_states = residual + hidden_states
 
