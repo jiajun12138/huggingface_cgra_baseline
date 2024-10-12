@@ -254,10 +254,8 @@ def custom_int_layernorm(x, w, b, bw):
     # if count["1"] <= 8:
     # print("statistics:", x.max() * 0.9)
 
-        int_s = 2 ** frac_bits[bw]
-        x_1 = (x_1 * int_s).to(torch.int64)
-    else:
-        x_1 = x_1
+    int_s = 2 ** frac_bits[bw]
+    x_1 = (x_1 * int_s).to(torch.int64)
 
     N = x_1.shape[-1]
     # print(N)
