@@ -87,6 +87,7 @@ def custom_int_exp(x, bw, term):
     #print(frac_part)
     # print(int_part)
     max_int_scale = 2 ** int(input.max() * 0.9)
+    max_int_scale[max_int_scale > 2 ** 6] = 2 ** 6
     count["1"] += 1
     if count["1"] <= 5:
         print(input.max(), max_int_scale)
@@ -184,7 +185,10 @@ def custom_int_softmax(x, bw, term):
     x_norm = new_x - x_max
     # print("norm input", x_norm, torch.isnan(x_norm).any())
     # print("softmax input", (torch.abs(x_norm) >= 20000).any(), torch.isnan(x_norm).any())
+    indices = x_norm < -10000
+    x_norm[indices] = 0
     x_exp, s = custom_int_exp(x_norm, bw, term)
+    x_exp[indices] = 0
     if torch.isnan(x_exp).any():
         print('x_exp overflow', x_exp.dtype)
     int_s = 2 ** frac_bits[bw]
@@ -205,7 +209,7 @@ def custom_int_layernorm(x, w, b, bw):
     # x_sum_x = torch.tensor(0)
     # x_sum_x2 = torch.tensor(0)
     # scale = x.max() * 0.9
-    scale = x.max() * 0.9
+    scale = torch.amax(x, dim=-1, keepdim=True)
     x_1 = x / scale
     # count["1"] += 1
     # if count["1"] <= 8:
@@ -223,14 +227,6 @@ def custom_int_layernorm(x, w, b, bw):
     #     x_sum_x2 = frac_add(frac_mult(x_i, x_i, bw), x_sum_x2, bw)
     # x_sum_x /= N
     # x_sum_x2 /= N
-    if w is None:
-        weight = 1.0
-    else:
-        weight = w
-    if b is None:
-        bias = 0.0
-    else:
-        bias = b
     invsqrt = 1.0 / (x_sum_x2 - (x_sum_x ** 2) + eps).sqrt()
     # print("statistics:")
     # print(x_1.max(), x_1.max(dim=-1), x_1.min(), x_1.min(dim=-1))
