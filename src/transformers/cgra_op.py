@@ -378,23 +378,24 @@ def gemmlowp_silu(x, bw, term):
     exp_0125 = torch.exp(torch.tensor(-0.125, dtype=torch.float16)) 
     ans = torch.zeros_like(x)
     indices1 = x >= 31.75
+
+    # for k, x_i in enumerate(x):
+    #     tmp = 1.0
+    #     if x_i >= 31.75:
+    #         # print("shabi")
+    #         continue
+    #     now = 0.0
+    tmp = torch.zeros_like(x) + 1.0
+    now = torch.zeros_like(x) 
+    for i, entry in enumerate(lut):
+        indices = now + entry <= x
+        tmp[indices] *= exp[i]
+        now[indices] += entry
+    t = 0.125 - (x - now)
+    indices = now != x
+    tmp[indices] *= (exp_0125 * (1 + t + torch.pow(t, 2) / 2.0))[indices]
+    ans = 1 + tmp
     ans[indices1] = 1.0
-
-    for k, x_i in enumerate(x):
-        tmp = 1.0
-        if x_i >= 31.75:
-            # print("shabi")
-            continue
-        now = 0.0
-        for i, entry in enumerate(lut):
-            if now + entry <= x_i:
-                tmp *= exp[i]
-                now += entry
-        if now != x_i:
-            t = 0.125 - (x_i - now)
-            tmp *= exp_0125 * (1 + t + t ** 2 / 2.0)
-
-        ans[k] = 1 + tmp
     
     return x / ans
 
