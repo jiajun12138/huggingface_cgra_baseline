@@ -214,6 +214,7 @@ def custom_int_gelu(x, bw, term):
 def custom_int_softmax(x, bw, term):
     # print("softmax input", (torch.abs(x) >= 20000).any(), torch.isnan(x).any())
     # return torch.nn.functional.softmax(x, dim=-1)
+    return torch.nn.functional.softmax(x, dim=-1)
     new_x = x.to(torch.float64)
     # x_clamp = torch.clamp(new_x, min = - 20)
     x_max = torch.max(new_x, -1, keepdim=True)[0]
@@ -369,8 +370,37 @@ def custom_int_log(x, bw, term):
 
     return log2_e_x, scale
 
+def gemmlowp_silu(x, bw, term):
+
+    # 1 + exp(-x)
+    lut = [0.25, 0.5, 1.0, 2, 4, 8, 16]
+    exp = torch.tensor([1672461947, 1302514674, 790015084, 290630308, 39332535, 720401, 242]) /  2 ** 31
+    exp_0125 = torch.exp(torch.tensor(-0.125, dtype=torch.float16)) 
+    ans = torch.zeros_like(x)
+    indices1 = x >= 31.75
+    ans[indices1] = 1.0
+
+    for k, x_i in enumerate(x):
+        tmp = 1.0
+        if x_i >= 31.75:
+            # print("shabi")
+            continue
+        now = 0.0
+        for i, entry in enumerate(lut):
+            if now + entry <= x_i:
+                tmp *= exp[i]
+                now += entry
+        if now != x_i:
+            t = 0.125 - (x_i - now)
+            tmp *= exp_0125 * (1 + t + t ** 2 / 2.0)
+
+        ans[k] = 1 + tmp
+    
+    return x / ans
+
 def custom_int_silu(x, bw, term):
-    return torch.nn.functional.silu(x)
+    return gemmlowp_silu(x, bw, term)
+    # return torch.nn.functional.silu(x)
     # x * sigmoid(x)
     fp_x = x.to(torch.float64)
     o_scale = x.max() * 0.9
