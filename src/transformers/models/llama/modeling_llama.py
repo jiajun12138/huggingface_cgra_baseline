@@ -761,8 +761,8 @@ class LlamaDecoderLayer(nn.Module):
         residual = hidden_states
 
         if self.softmax_bw is not None:
-            # hidden_states = self.input_layernorm(hidden_states)
-            hidden_states = custom_int_rmsnorm(hidden_states, self.input_layernorm.weight, self.input_layernorm.variance_epsilon, self.softmax_bw)
+            hidden_states = self.input_layernorm(hidden_states)
+            # hidden_states = custom_int_rmsnorm(hidden_states, self.input_layernorm.weight, self.input_layernorm.variance_epsilon, self.softmax_bw)
         else:
             # hidden_states = self.ln_cross_attn(hidden_states)
             hidden_states = self.input_layernorm(hidden_states)
@@ -784,8 +784,8 @@ class LlamaDecoderLayer(nn.Module):
         # Fully Connected
         residual = hidden_states
         if self.softmax_bw is not None:
-            # hidden_states = self.post_attention_layernorm(hidden_states)
-            hidden_states = custom_int_rmsnorm(hidden_states, self.post_attention_layernorm.weight, self.input_layernorm.variance_epsilon, self.softmax_bw)
+            hidden_states = self.post_attention_layernorm(hidden_states)
+            # hidden_states = custom_int_rmsnorm(hidden_states, self.post_attention_layernorm.weight, self.input_layernorm.variance_epsilon, self.softmax_bw)
         else:
             # hidden_states = self.ln_cross_attn(hidden_states)
             hidden_states = self.post_attention_layernorm(hidden_states)
